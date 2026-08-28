@@ -1,0 +1,384 @@
+/* ========================================================================== */
+/* 1. ZIPDA design tokens                                                     */
+/* ========================================================================== */
+:root {
+  /* Figma Page(2차 초안) palette */
+  --zipda-palette-primary: #718355;
+  --zipda-palette-secondary: #cfe1b9;
+  --zipda-palette-tertiary: #b5c99a;
+  --zipda-palette-neutral: #fffef9;
+
+  /* Semantic colors */
+  --zipda-color-primary: var(--zipda-palette-primary);
+  --zipda-color-primary-hover: #5f7047;
+  --zipda-color-primary-active: #4d5b3a;
+  --zipda-color-primary-light: var(--zipda-palette-secondary);
+  --zipda-color-background: #f3f3f1;
+  --zipda-color-surface: var(--zipda-palette-neutral);
+  --zipda-color-white: #ffffff;
+  --zipda-color-text: #20211f;
+  --zipda-color-text-muted: #73766f;
+  --zipda-color-border: #d9dcd5;
+  --zipda-color-disabled: #e8e9e6;
+  --zipda-color-danger: #c83f3f;
+  --zipda-color-danger-light: #fff0f0;
+  --zipda-color-kakao: #fee500;
+  --zipda-color-kakao-text: #191919;
+  --zipda-color-subtle-text: #516237;
+  --zipda-color-subtle-hover: #dde5d4;
+  --zipda-color-subtle-background: #efeee9;
+
+  /* Layout: Figma frame width 344px */
+  --zipda-app-width: 344px;
+  --zipda-page-padding: 20px;
+  --zipda-header-height: 52px;
+  --zipda-bottom-nav-height: 64px;
+  --zipda-form-gap: 20px;
+  --zipda-section-gap: 32px;
+
+  /* Shape and focus */
+  --zipda-radius-small: 6px;
+  --zipda-radius-medium: 10px;
+  --zipda-radius-large: 14px;
+  --zipda-shadow-app: 0 8px 28px rgb(32 33 31 / 10%);
+  --zipda-focus-ring: 0 0 0 3px rgb(113 131 85 / 20%);
+
+  /* Common system font */
+  --zipda-font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ========================================================================== */
+/* 2. Minimal reset                                                           */
+/* ========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  color: var(--zipda-color-text);
+  background: var(--zipda-color-background);
+  font-family: var(--zipda-font-family);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100dvh;
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+/* ========================================================================== */
+/* 3. App shell: App.vue owns the single <main>                               */
+/* ========================================================================== */
+#app {
+  min-height: 100dvh;
+}
+
+.app-shell {
+  position: relative;
+  width: 100%;
+  max-width: var(--zipda-app-width);
+  min-height: 100dvh;
+  margin: 0 auto;
+  overflow-x: hidden;
+  background: var(--zipda-color-white);
+  box-shadow: var(--zipda-shadow-app);
+}
+
+.app-main {
+  min-height: 100dvh;
+}
+
+/* Bottom navigation이 보이는 화면은 콘텐츠가 가려지지 않도록 공간을 확보한다. */
+.app-main--with-bottom-nav {
+  padding-bottom: calc(var(--zipda-bottom-nav-height) + env(safe-area-inset-bottom));
+}
+
+/* 화면 전체 */
+/* Routed page root: each page uses <section class="page">, not another main. */
+.page {
+  min-height: 100dvh;
+  background: var(--zipda-color-white);
+}
+
+/* 화면 좌우 여백 */
+.page-content {
+  width: 100%;
+  padding: 24px var(--zipda-page-padding) 40px;
+}
+
+/* ========================================================================== */
+/* 4. Common top header patterns                                              */
+/* ========================================================================== */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: center;
+  width: 100%;
+  height: var(--zipda-header-height);
+  padding: 0 8px;
+  background: var(--zipda-color-surface);
+  border-bottom: 1px solid var(--zipda-color-border);
+}
+
+.app-header__title {
+  overflow: hidden;
+  color: var(--zipda-color-text);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--zipda-color-text);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.app-header__button:focus-visible {
+  outline: none;
+  box-shadow: var(--zipda-focus-ring);
+}
+
+.app-header__side {
+  width: 40px;
+  min-width: 40px;
+}
+
+/* ========================================================================== */
+/* 5. Common bottom patterns                                                  */
+/* ========================================================================== */
+/* Main/list screens: fixed shortcut navigation. */
+.bottom-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  display: flex;
+  width: 100%;
+  max-width: var(--zipda-app-width);
+  min-height: var(--zipda-bottom-nav-height);
+  margin: 0 auto;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  background: var(--zipda-color-white);
+  border-top: 1px solid var(--zipda-color-border);
+  box-shadow: 0 -4px 16px rgb(32 33 31 / 6%);
+}
+
+.bottom-nav__item {
+  flex: 1 1 0;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  min-width: 0;
+  color: var(--zipda-color-text-muted);
+  font-size: 10px;
+}
+
+.bottom-nav__icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 18px;
+}
+
+.bottom-nav__item.router-link-active {
+  color: var(--zipda-color-primary-active);
+  font-weight: 700;
+}
+
+.bottom-nav__item.router-link-active .bottom-nav__icon {
+  background: var(--zipda-color-primary-light);
+}
+
+/* Flow/login screens: use a wide action instead of BottomNavBar. */
+.page-bottom-action {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  width: 100%;
+  padding: 12px var(--zipda-page-padding) calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0%), var(--zipda-color-white) 18%);
+}
+
+/* ========================================================================== */
+/* 6. Reusable page typography and form layout                                */
+/* ========================================================================== */
+.page-heading {
+  display: grid;
+  gap: 8px;
+  margin-bottom: var(--zipda-section-gap);
+  text-align: center;
+}
+
+.page-title {
+  color: var(--zipda-color-text);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+}
+
+.page-description {
+  color: var(--zipda-color-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.section-title {
+  color: var(--zipda-color-text);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* form 태그: 제목, 입력 영역, 버튼 등 큰 단위 간격 */
+.form,
+.form-layout {
+  display: grid;
+  gap: var(--zipda-form-gap);
+  width: 100%;
+}
+
+/* 연속된 입력창 사이 간격 */
+.field-group,
+.form-section {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+/* 하단 버튼 배치 */
+.form-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+/* 동일한 너비 버튼 */
+.form-actions > * {
+  flex: 1 1 0;
+}
+
+/* 단계 이동: 이전 버튼 1, 다음 버튼 2 비율 */
+.form-actions--step {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
+
+/* 찜 아이콘처럼 작은 실행 1개와 주요 버튼 1개의 조합 */
+.form-actions--icon-primary > :first-child {
+  flex: 0 0 40px;
+}
+
+.form-actions--icon-primary > :last-child {
+  flex: 1 1 auto;
+}
+
+/* 여러 버튼 행 사이의 세로 간격 */
+.action-stack {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+/* ========================================================================== */
+/* 7. Feedback and small utilities                                            */
+/* ========================================================================== */
+.text-muted {
+  color: var(--zipda-color-text-muted);
+}
+
+.text-error {
+  color: var(--zipda-color-danger);
+}
+
+.info-box,
+.error-box {
+  padding: 14px;
+  border-radius: var(--zipda-radius-medium);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.info-box {
+  color: var(--zipda-color-text);
+  background: var(--zipda-color-primary-light);
+}
+
+.error-box {
+  color: var(--zipda-color-danger);
+  background: var(--zipda-color-danger-light);
+}
+
+.full-width {
+  width: 100%;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 343px) {
+  :root {
+    --zipda-page-padding: 16px;
+  }
+
+  .app-shell {
+    box-shadow: none;
+  }
+}
