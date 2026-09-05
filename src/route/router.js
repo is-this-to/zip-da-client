@@ -24,6 +24,12 @@ const routes = [
     meta: setMeta(false, false, [], true),
   },
   {
+    path: "/properties/search",
+    component: () =>
+    import("../page/property/PropertyMapPage.vue"),
+    meta: setMeta(false, false, [], true),
+  },
+  {
     path: "/errors",
     component: ErrorPage,
     meta: setMeta(false, false),
