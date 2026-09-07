@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Main from "../page/main/Main.vue";
 import ErrorPage from "../page/error/ErrorPage.vue";
+import SignIn from "../page/auth/SignIn.vue";
 
 // 팀원 각자파트 권한을 나눠서 routes 컴포넌트 경로 적어주세요
 const setMeta = (requiresAuth, guestOnly, roles = [], showBottomNav = false) => {
@@ -28,6 +29,16 @@ const routes = [
     component: () =>
     import("../page/property/PropertyMapPage.vue"),
     meta: setMeta(false, false, [], true),
+  },
+  {
+    path: "/sign-in",
+    component: SignIn,
+    meta: setMeta(false, true),
+  },
+  {
+    path: "/password-reset",
+    component: "",
+    meta: setMeta(false, true),
   },
   {
     path: "/errors",
