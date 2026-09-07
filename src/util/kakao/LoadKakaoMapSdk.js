@@ -21,7 +21,7 @@ export const loadKakaoMapSdk = ()=>{
 
   kakaoMapSdkPromise = new Promise(
     (resolve, reject) =>{
-      const existingScript = document.querySelector('script[data-kakao-map-sdk="true"');
+      const existingScript = document.querySelector('script[data-kakao-map-sdk="true"]');
 
       if(existingScript){
         existingScript.addEventListener("load", ()=>{

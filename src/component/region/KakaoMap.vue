@@ -6,7 +6,7 @@ import {
   watch,
 } from "vue";
 
-import { loadKakaoMapSdk } from "../../util/kakao/loadKakaoMapSdk.js";
+import { loadKakaoMapSdk } from "../../util/kakao/LoadKakaoMapSdk.js";
 
 const props = defineProps({
   regionDetail: {
