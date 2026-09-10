@@ -3,10 +3,10 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 import { useFileStore } from "../../store/file/useFileStore.js";
-import { useMyErrorStore } from "../../store/error/useMyErrorStore.js";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
+import MyFileInput from "../../component/input/MyFileInput.vue";
 import {
   email as emailRule,
   password as passwordRule,
@@ -15,7 +15,6 @@ import {
 const router = useRouter();
 const authStore = useAuthStore();
 const fileStore = useFileStore();
-const myErrorStore = useMyErrorStore();
 const step = ref(1);
 const terms = ref([]);
 const agreed = reactive({});
@@ -32,6 +31,7 @@ const form = reactive({
   passwordCheck: "",
   name: "",
   phone: "",
+  profile: null,
   profileFileId: null,
 });
 const checked = reactive({
@@ -87,30 +87,26 @@ const errorMessage = (error, fallback) =>
   error?.response?.data?.data || error?.response?.data?.message || fallback;
 
 const handleChangeProfile = async (event) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
-
-  if (file.size > 10 * 1024 * 1024) {
-    formError.value = "프로필 사진은 최대 10MB까지 업로드할 수 있습니다.";
-    event.target.value = "";
+  const file = event?.target?.files?.[0];
+  if (!file) {
+    if (preview.value) URL.revokeObjectURL(preview.value);
+    preview.value = "";
+    form.profileFileId = null;
     return;
   }
 
   if (preview.value) {
     URL.revokeObjectURL(preview.value);
-    preview.value = "";
   }
+  preview.value = URL.createObjectURL(file);
+  form.profileFileId = null;
 
   try {
     profileUploading.value = true;
     const uploadedFile = await fileStore.uploadProfile(file);
     form.profileFileId = uploadedFile.fileId;
-    preview.value = URL.createObjectURL(file);
     formError.value = "";
   } catch (error) {
-    form.profileFileId = null;
-    event.target.value = "";
-    if (myErrorStore.redirectErrorPage(error)) return;
     formError.value = errorMessage(
       error,
       "프로필 사진 업로드에 실패했습니다. 다시 시도해 주세요.",
@@ -496,19 +492,16 @@ onBeforeUnmount(() => {
             />
             <span v-else aria-hidden="true">♙</span>
           </span>
-          <label class="profile-file-label" for="profile-file"
-            >프로필 사진</label
-          >
-          <input
-            id="profile-file"
-            type="file"
-            accept="image/*"
+          <MyFileInput
+            v-model="form.profile"
+            label="프로필 사진"
+            button-text="이미지 선택"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            :max-size="10485760"
             :disabled="profileUploading"
             @change="handleChangeProfile"
+            helper-text="선택 사항 · 최대 10MB"
           />
-          <small>{{
-            profileUploading ? "업로드 중..." : "선택 사항 · 최대 10MB"
-          }}</small>
         </div>
         <MyInput
           v-model="form.name"
@@ -719,17 +712,6 @@ onBeforeUnmount(() => {
   height: 100%;
   object-fit: cover;
 }
-.profile-file-label {
-  font-size: 14px;
-  font-weight: 700;
-}
-.profile input[type="file"] {
-  max-width: 100%;
-}
-.profile small {
-  color: var(--zipda-color-text-muted);
-  font-size: 12px;
-}
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -780,4 +762,3 @@ onBeforeUnmount(() => {
 }
 </style>
 ate>ate>ate>
-

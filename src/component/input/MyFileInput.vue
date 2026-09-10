@@ -17,7 +17,7 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['validation-error'])
+const emit = defineEmits(['validation-error', 'change'])
 const model = defineModel({ default: null })
 const fileInput = ref(null)
 const internalError = ref('')
@@ -37,6 +37,7 @@ const handleChange = (event) => {
 
   if (!file) {
     model.value = null
+    emit('change', event)
     return
   }
 
@@ -44,16 +45,19 @@ const handleChange = (event) => {
     event.target.value = ''
     model.value = null
     setError(`파일 크기는 ${Math.floor(props.maxSize / 1024 / 1024)}MB 이하여야 합니다.`)
+    emit('change', event)
     return
   }
 
   model.value = file
+  emit('change', event)
 }
 
 const clearFile = () => {
   model.value = null
   internalError.value = ''
   if (fileInput.value) fileInput.value.value = ''
+  emit('change', null)
 }
 </script>
 
