@@ -1,11 +1,12 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
+import { useFileStore } from "../../store/file/useFileStore.js";
+import { useMyErrorStore } from "../../store/error/useMyErrorStore.js";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
-import MyFileInput from "../../component/input/MyFileInput.vue";
 import {
   email as emailRule,
   password as passwordRule,
@@ -13,12 +14,16 @@ import {
 
 const router = useRouter();
 const authStore = useAuthStore();
+const fileStore = useFileStore();
+const myErrorStore = useMyErrorStore();
 const step = ref(1);
 const terms = ref([]);
 const agreed = reactive({});
 const selectedTerm = ref(null);
 const termsError = ref("");
 const submitting = ref(false);
+const profileUploading = ref(false);
+const preview = ref("");
 const formError = ref("");
 const form = reactive({
   email: "",
@@ -27,7 +32,7 @@ const form = reactive({
   passwordCheck: "",
   name: "",
   phone: "",
-  profile: null,
+  profileFileId: null,
 });
 const checked = reactive({
   email: { value: "", available: false, message: "" },
@@ -80,6 +85,40 @@ const stepName = computed(
 );
 const errorMessage = (error, fallback) =>
   error?.response?.data?.data || error?.response?.data?.message || fallback;
+
+const handleChangeProfile = async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  if (file.size > 10 * 1024 * 1024) {
+    formError.value = "프로필 사진은 최대 10MB까지 업로드할 수 있습니다.";
+    event.target.value = "";
+    return;
+  }
+
+  if (preview.value) {
+    URL.revokeObjectURL(preview.value);
+    preview.value = "";
+  }
+
+  try {
+    profileUploading.value = true;
+    const uploadedFile = await fileStore.uploadProfile(file);
+    form.profileFileId = uploadedFile.fileId;
+    preview.value = URL.createObjectURL(file);
+    formError.value = "";
+  } catch (error) {
+    form.profileFileId = null;
+    event.target.value = "";
+    if (myErrorStore.redirectErrorPage(error)) return;
+    formError.value = errorMessage(
+      error,
+      "프로필 사진 업로드에 실패했습니다. 다시 시도해 주세요.",
+    );
+  } finally {
+    profileUploading.value = false;
+  }
+};
 
 const loadTerms = async () => {
   try {
@@ -215,17 +254,16 @@ const verifyCode = async () => {
 };
 
 const signup = async () => {
+  if (profileUploading.value) {
+    formError.value = "프로필 사진 업로드가 끝날 때까지 기다려 주세요.";
+    return;
+  }
   if (!profileReady.value || submitting.value) {
     formError.value = "이름과 올바른 휴대전화 번호를 입력해 주세요.";
     return;
   }
   try {
     submitting.value = true;
-    let profileFileId = null;
-    if (form.profile)
-      profileFileId = String(
-        (await authStore.uploadProfile(form.profile)).fileId,
-      );
     await authStore.registration({
       email: form.email,
       verificationId: verification.id,
@@ -234,7 +272,8 @@ const signup = async () => {
       name: form.name.trim(),
       nickname: form.nickname.trim(),
       phone: phone(),
-      profileFileId,
+      profileFileId:
+        form.profileFileId == null ? null : String(form.profileFileId),
       termsAgreements: terms.value.map((term) => ({
         termsId: term.termId,
         version: term.termVersion,
@@ -255,6 +294,9 @@ const signup = async () => {
 const goBack = () =>
   step.value === 1 ? router.push("/sign-in") : step.value--;
 onMounted(loadTerms);
+onBeforeUnmount(() => {
+  if (preview.value) URL.revokeObjectURL(preview.value);
+});
 </script>
 
 <template>
@@ -446,15 +488,27 @@ onMounted(loadTerms);
 
       <form v-else class="form step-content" @submit.prevent="signup">
         <div class="profile">
-          <span>{{ form.profile ? "✓" : "♙" }}</span
-          ><MyFileInput
-            v-model="form.profile"
-            label="프로필 사진"
-            button-text="이미지 선택"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            :max-size="10485760"
-            helper-text="선택 사항 · 최대 10MB"
+          <span class="profile-preview">
+            <img
+              v-if="preview"
+              :src="preview"
+              alt="선택한 프로필 사진 미리보기"
+            />
+            <span v-else aria-hidden="true">♙</span>
+          </span>
+          <label class="profile-file-label" for="profile-file"
+            >프로필 사진</label
+          >
+          <input
+            id="profile-file"
+            type="file"
+            accept="image/*"
+            :disabled="profileUploading"
+            @change="handleChangeProfile"
           />
+          <small>{{
+            profileUploading ? "업로드 중..." : "선택 사항 · 최대 10MB"
+          }}</small>
         </div>
         <MyInput
           v-model="form.name"
@@ -475,7 +529,7 @@ onMounted(loadTerms);
             type="submit"
             block
             size="large"
-            :disabled="!profileReady"
+            :disabled="!profileReady || profileUploading"
             :loading="submitting"
             loading-text="가입 처리 중"
             >가입 완료</MyButton
@@ -656,6 +710,25 @@ onMounted(loadTerms);
   background: var(--zipda-color-primary-light);
   border-radius: 50%;
   font-size: 30px;
+}
+.profile-preview {
+  overflow: hidden;
+}
+.profile-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-file-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+.profile input[type="file"] {
+  max-width: 100%;
+}
+.profile small {
+  color: var(--zipda-color-text-muted);
+  font-size: 12px;
 }
 .modal-backdrop {
   position: fixed;

@@ -94,16 +94,6 @@ export const useAuthStore = defineStore("authStore", () => {
       )
     ).data.data;
 
-  const uploadProfile = async (file) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    return (
-      await myAxios.post("/api/member/files/profiles", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })
-    ).data.data;
-  };
-
   const registration = async (newMemberData) =>
     (await myAxios.post("/api/member", newMemberData)).data.data;
 
@@ -145,7 +135,6 @@ export const useAuthStore = defineStore("authStore", () => {
     checkDuplicate,
     sendEmailVerification,
     verifyEmailVerification,
-    uploadProfile,
     registration,
     startKakaoLogin,
     getSocialSignupContext,
