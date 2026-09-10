@@ -20,6 +20,7 @@ const signInForm = reactive({
 });
 const isSubmitting = ref(false);
 const errorMessage = ref("");
+const isKakaoRedirecting = ref(false);
 
 const submitLogin = async () => {
   if (isSubmitting.value) return;
@@ -46,6 +47,16 @@ const submitLogin = async () => {
     );
     errorMessage.value = validationMessages.join("\n");
   }
+};
+
+const redirectSignUp = () => {
+  router.push("/sign-up");
+};
+
+const startKakaoLogin = () => {
+  if (isKakaoRedirecting.value) return;
+  isKakaoRedirecting.value = true;
+  authStore.startKakaoLogin();
 };
 </script>
 
@@ -102,11 +113,19 @@ const submitLogin = async () => {
         </MyButton>
       </form>
 
-      <div class="sign-in-divider" aria-hidden="true">
+      <!-- <div class="sign-in-divider" aria-hidden="true">
         <span>또는</span>
-      </div>
+      </div> -->
 
-      <MyButton type="button" variant="kakao" size="large" block>
+      <!-- <MyButton
+        type="button"
+        variant="kakao"
+        size="large"
+        block
+        :loading="isKakaoRedirecting"
+        loading-text="카카오로 이동 중"
+        @click="startKakaoLogin"
+      >
         <template #leading>
           <img
             class="sign-in-kakao-icon"
@@ -116,7 +135,7 @@ const submitLogin = async () => {
           />
         </template>
         카카오로 계속하기
-      </MyButton>
+      </MyButton> -->
 
       <p class="sign-in-sign-up">
         <span>계정이 없으신가요?</span>
