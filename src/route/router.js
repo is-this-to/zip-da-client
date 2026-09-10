@@ -2,9 +2,15 @@ import { createRouter, createWebHistory } from "vue-router";
 import Main from "../page/main/Main.vue";
 import ErrorPage from "../page/error/ErrorPage.vue";
 import SignIn from "../page/auth/SignIn.vue";
+import SignUp from "../page/auth/SignUp.vue";
 
 // 팀원 각자파트 권한을 나눠서 routes 컴포넌트 경로 적어주세요
-const setMeta = (requiresAuth, guestOnly, roles = [], showBottomNav = false) => {
+const setMeta = (
+  requiresAuth,
+  guestOnly,
+  roles = [],
+  showBottomNav = false,
+) => {
   return {
     requiresAuth, // 로그인이 필요?
     guestOnly, // 게스트만 접근 가능?
@@ -26,13 +32,32 @@ const routes = [
   },
   {
     path: "/properties/search",
-    component: () =>
-    import("../page/property/PropertyMapPage.vue"),
+    component: () => import("../page/property/PropertyMapPage.vue"),
     meta: setMeta(false, false, [], true),
   },
   {
     path: "/sign-in",
     component: SignIn,
+    meta: setMeta(false, true),
+  },
+  {
+    path: "/sign-up",
+    component: SignUp,
+    meta: setMeta(false, true),
+  },
+  {
+    path: "/oauth2/callback",
+    component: () => import("../page/auth/OAuth2Callback.vue"),
+    meta: setMeta(false, true),
+  },
+  {
+    path: "/social-sign-up",
+    component: () => import("../page/auth/SocialSignUp.vue"),
+    meta: setMeta(false, true),
+  },
+  {
+    path: "/social-account-link",
+    component: () => import("../page/auth/SocialAccountLink.vue"),
     meta: setMeta(false, true),
   },
   {
@@ -64,7 +89,6 @@ const router = createRouter({
 // router 이동 전 실행되는 메서드
 // to: 이동하는 router, from: 지금 있는 router
 router.beforeEach(async (to, from, next) => {
-
   // 나머지는 통과
   next();
 });

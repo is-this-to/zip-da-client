@@ -8,12 +8,11 @@ export const useAuthStore = defineStore("authStore", () => {
   const accessToken = ref("");
   const userInfo = ref(null);
   const authInitialized = ref(false);
-
+  const socialSignupContext = ref(null);
   let reissuePromise = null;
 
   const role = computed(() => {
     if (!accessToken.value) return null;
-
     try {
       return jwtDecode(accessToken.value).role;
     } catch {
@@ -49,7 +48,7 @@ export const useAuthStore = defineStore("authStore", () => {
     } finally {
       authInitialized.value = true;
     }
-  }; // 만료 시 여러 API 요청이 동시에 들어와도 refresh token은 한 번만 회전시킨다.
+  };
 
   const reissue = () => {
     if (!reissuePromise) {
@@ -57,7 +56,6 @@ export const useAuthStore = defineStore("authStore", () => {
         reissuePromise = null;
       });
     }
-
     return reissuePromise;
   };
 
@@ -69,8 +67,68 @@ export const useAuthStore = defineStore("authStore", () => {
     }
   };
 
-  const registration = async (newUserData) => {
-    await myAxios.post("/api/users", newUserData);
+  const getTerms = async () =>
+    (await myAxios.get("/api/member/terms")).data.data;
+
+  const checkDuplicate = async (typePolicy, value) =>
+    (
+      await myAxios.post("/api/member/member-validations", {
+        typePolicy,
+        value,
+      })
+    ).data.data;
+
+  const sendEmailVerification = async (email) =>
+    (await myAxios.post("/api/member/email-verifications", { email })).data
+      .data;
+
+  const verifyEmailVerification = async (
+    verificationId,
+    email,
+    verificationCode,
+  ) =>
+    (
+      await myAxios.patch(
+        `/api/member/email-verifications/${encodeURIComponent(String(verificationId))}`,
+        { email, verificationCode },
+      )
+    ).data.data;
+
+  const uploadProfile = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return (
+      await myAxios.post("/api/member/files/profiles", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+    ).data.data;
+  };
+
+  const registration = async (newMemberData) =>
+    (await myAxios.post("/api/member", newMemberData)).data.data;
+
+  const startKakaoLogin = () => {
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(
+      /\/$/,
+      "",
+    );
+    window.location.assign(`${baseUrl}/api/auth/oauth2/authorization/kakao`);
+  };
+
+  const getSocialSignupContext = async () => {
+    const context = (
+      await myAxios.get("/api/member/auth/social-signups/current")
+    ).data.data;
+    socialSignupContext.value = context;
+    return context;
+  };
+
+  const socialRegistration = async (additionalInfo) =>
+    (await myAxios.post("/api/member/auth/social-signups", additionalInfo)).data
+      .data;
+
+  const linkSocialAccount = async (linkRequest) => {
+    await myAxios.post("/api/member/auth/social-links", linkRequest);
   };
 
   return {
@@ -78,10 +136,21 @@ export const useAuthStore = defineStore("authStore", () => {
     accessToken,
     userInfo,
     authInitialized,
+    socialSignupContext,
     role,
     login,
     reissue,
     logout,
+    getTerms,
+    checkDuplicate,
+    sendEmailVerification,
+    verifyEmailVerification,
+    uploadProfile,
     registration,
+    startKakaoLogin,
+    getSocialSignupContext,
+    socialRegistration,
+    linkSocialAccount,
   };
 });
+

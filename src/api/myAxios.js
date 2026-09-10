@@ -23,11 +23,12 @@ const shouldReissue = (accessToken) => {
 
 myAxios.interceptors.request.use(async (config) => {
   const authStore = useAuthStore();
-  const isReissueRequest = config.url === "/api/auth/tokens";
+  const isReissueRequest = config.url === "/api/member/auth/token-refreshes";
 
   if (
     !isReissueRequest &&
     authStore.isLoggedIn &&
+    authStore.accessToken &&
     shouldReissue(authStore.accessToken)
   ) {
     await authStore.reissue();

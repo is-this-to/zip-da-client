@@ -6,8 +6,8 @@ const props = defineProps({
   // - reset: 소속된 <form>의 입력값을 초기값으로 되돌리는 초기화 버튼
   type: {
     type: String,
-    default: 'button',
-    validator: (value) => ['button', 'submit', 'reset'].includes(value),
+    default: "button",
+    validator: (value) => ["button", "submit", "reset"].includes(value),
   },
   // 버튼의 색상과 강조 유형
   // - primary: 주요 실행, secondary: 보조 실행, outline: 테두리형 보조 실행
@@ -15,15 +15,23 @@ const props = defineProps({
   // - text: 링크형 실행, kakao: 카카오 로그인
   variant: {
     type: String,
-    default: 'primary',
+    default: "primary",
     validator: (value) =>
-      ['primary', 'secondary', 'outline', 'subtle', 'danger', 'text', 'kakao'].includes(value),
+      [
+        "primary",
+        "secondary",
+        "outline",
+        "subtle",
+        "danger",
+        "text",
+        "kakao",
+      ].includes(value),
   },
   // 버튼의 높이와 글자 크기: small, medium, large
   size: {
     type: String,
-    default: 'medium',
-    validator: (value) => ['small', 'medium', 'large'].includes(value),
+    default: "medium",
+    validator: (value) => ["small", "medium", "large"].includes(value),
   },
   // true이면 버튼 너비를 부모 영역의 100%로 확장
   block: {
@@ -43,28 +51,32 @@ const props = defineProps({
   // loading 상태일 때 버튼에 표시할 문구
   loadingText: {
     type: String,
-    default: '처리 중',
+    default: "처리 중",
   },
-})
+});
 
-const emit = defineEmits(['click'])
+const emit = defineEmits(["click"]);
 
 const handleClick = (event) => {
-  if (props.disabled || props.loading) return
-  emit('click', event)
-}
+  if (props.disabled || props.loading) return;
+  emit("click", event);
+};
 </script>
 
 <template>
   <button
     :type="type"
     class="my-button"
-    :class="[`my-button--${variant}`, `my-button--${size}`, { 'my-button--block': block }]"
+    :class="[
+      `my-button--${variant}`,
+      `my-button--${size}`,
+      { 'my-button--block': block },
+    ]"
     :disabled="disabled || loading"
     :aria-busy="loading"
     @click="handleClick"
   >
-    <template v-if="loading">      
+    <template v-if="loading">
       <span class="my-button__spinner" aria-hidden="true"></span>
       <span>{{ loadingText }}</span>
     </template>
@@ -89,7 +101,10 @@ const handleClick = (event) => {
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
 }
 
 .my-button:focus-visible {
