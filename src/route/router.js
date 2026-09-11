@@ -3,6 +3,17 @@ import Main from "../page/main/Main.vue";
 import ErrorPage from "../page/error/ErrorPage.vue";
 import SignIn from "../page/auth/SignIn.vue";
 import SignUp from "../page/auth/SignUp.vue";
+import { useAuthStore } from "../store/auth/useAuthStore.js";
+import OAuth2Callback from "../page/auth/OAuth2Callback.vue";
+import SocialSignUp from "../page/auth/SocialSignUp.vue";
+import SocialAccountLink from "../page/auth/SocialAccountLink.vue";
+import MyPage from "../page/member/MyPage.vue";
+import AgentDocumentUpload from "../page/member/AgentDocumentUpload.vue";
+import AgentOcrResult from "../page/member/AgentOcrResult.vue";
+import MemberProfileEdit from "../page/member/MemberProfileEdit.vue";
+import MemberPasswordChange from "../page/member/MemberPasswordChange.vue";
+import AgentProfileEdit from "../page/agent/AgentProfileEdit.vue";
+import AgentProfileDetail from "../page/agent/AgentProfileDetail.vue";
 
 // 팀원 각자파트 권한을 나눠서 routes 컴포넌트 경로 적어주세요
 const setMeta = (
@@ -47,18 +58,54 @@ const routes = [
   },
   {
     path: "/oauth2/callback",
-    component: () => import("../page/auth/OAuth2Callback.vue"),
+    component: OAuth2Callback,
     meta: setMeta(false, true),
   },
   {
     path: "/social-sign-up",
-    component: () => import("../page/auth/SocialSignUp.vue"),
+    component: SocialSignUp,
     meta: setMeta(false, true),
   },
   {
     path: "/social-account-link",
-    component: () => import("../page/auth/SocialAccountLink.vue"),
+    component: SocialAccountLink,
     meta: setMeta(false, true),
+  },
+  {
+    path: "/mypage",
+    alias: "/members/me",
+    component: MyPage,
+    meta: setMeta(true, false, ["USER", "AGENT"], true),
+  },
+  {
+    path: "/mypage/agent-application/documents",
+    component: AgentDocumentUpload,
+    meta: setMeta(true, false, ["USER"]),
+  },
+  {
+    path: "/mypage/agent-application/ocr",
+    component: AgentOcrResult,
+    meta: setMeta(true, false, ["USER"]),
+  },
+  {
+    path: "/mypage/profile",
+    component: MemberProfileEdit,
+    meta: setMeta(true, false, ["USER", "AGENT"]),
+  },
+  {
+    path: "/mypage/password",
+    component: MemberPasswordChange,
+    meta: setMeta(true, false, ["USER", "AGENT"]),
+  },
+  {
+    path: "/mypage/agent-profile",
+    component: AgentProfileEdit,
+    meta: setMeta(true, false, ["AGENT"]),
+  },
+  {
+    path: "/agents/:agentId",
+    component: AgentProfileDetail,
+    meta: setMeta(false, false),
   },
   {
     path: "/password-reset",
@@ -89,6 +136,27 @@ const router = createRouter({
 // router 이동 전 실행되는 메서드
 // to: 이동하는 router, from: 지금 있는 router
 router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore();
+  if (!authStore.authInitialized) {
+    try {
+      await authStore.reissue();
+    } catch {
+      // 토큰 재발급 실패: 게스트 상태로 진행
+    }
+  }
+
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    return next("/sign-in");
+  }
+
+  if (
+    to.meta.roles?.length &&
+    authStore.isLoggedIn &&
+    !to.meta.roles.includes(authStore.role)
+  ) {
+    return next("/errors");
+  }
+
   // 나머지는 통과
   next();
 });

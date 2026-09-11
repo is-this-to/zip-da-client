@@ -138,6 +138,7 @@ export const useAuthStore = defineStore("authStore", () => {
     authInitialized,
     socialSignupContext,
     role,
+    clearAuthStore,
     login,
     reissue,
     logout,
