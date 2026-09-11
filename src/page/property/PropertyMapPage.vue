@@ -8,14 +8,17 @@ import {
 } from "vue";
 
 import { useRegionStore } from "../../store/region/useRegionStore.js";
+import { usePropertyMapStore } from "../../store/property/usePropertyMapStore.js";
 import { useMyErrorStore } from "../../store/error/useMyErrorStore.js";
 
 import IconButton from "../../component/button/IconButton.vue";
 import KakaoMap from "../../component/region/KakaoMap.vue";
 import RegionSelector from "../../component/region/RegionSelector.vue";
+import PropertyMapList from "../../component/property/PropertyMapList.vue";
 
 
 const regionStore = useRegionStore();
+const propertyMapStore = usePropertyMapStore();
 const myErrorStore = useMyErrorStore();
 
 const kakaoMapRef = shallowRef(null);
@@ -77,6 +80,11 @@ let searchDebounceTimer = null;
 let levelChangeTimer = null;
 
 /**
+ * 지도 bounds 매물 조회 debounce 타이머
+ */
+let mapPropertyRequestTimer = null;
+
+/**
  * 현재 실행 중인 지역 상세 요청 키
  * 
  * 같은 Region과 같은 지도 단계의 요청이
@@ -133,6 +141,15 @@ const handleSearchError = (error) =>{
   searchErrorMessage.value = error?.response?.data?.message ?? "지역 검색 결과를 불러오지 못했습니다.";
 }
 
+/**
+ * 지도 매물 API 오류는 지역 검색·상세 오류와 분리한다.
+ */
+const handleMapPropertyError = (error) => {
+  console.error(error);
+
+  myErrorStore.redirectErrorPage(error);
+};
+
 
 /**
  * 지역 상세·경계 요청
@@ -143,7 +160,7 @@ const handleSearchError = (error) =>{
 const requestRegionDetail = async (
   regionId,
   level = mapLevel.value,
-  { fitMap = false } = {},
+  { fitMap = false, maximumLevel = null } = {},
 ) => {
   const requestKey =
     `${regionId}:${level}`;
@@ -178,6 +195,7 @@ const requestRegionDetail = async (
     if (detail && fitMap) {
       kakaoMapRef.value?.fitToRegion(
         detail,
+        { maximumLevel },
       );
     }
 
@@ -322,7 +340,14 @@ const applySelectedRegion = async () => {
    * 선택한 Region의 상세·경계를 조회하고
    * bounds에 맞춰 지도를 이동한다.
    */
-  await requestRegionDetail(region.regionId, mapLevel.value,{fitMap: true});
+  await requestRegionDetail(
+    region.regionId,
+    mapLevel.value,
+    {
+      fitMap: true,
+      maximumLevel: Number(region.regionLevel) === 3 ? 7 : null,
+    },
+  );
 };
 
 /**
@@ -368,6 +393,57 @@ const handleLevelChange = (level) =>{
     },
     300
   );
+};
+
+/**
+ * 지도 이동 또는 확대가 끝난 뒤 현재 화면의 공개 매물을 조회한다.
+ */
+const handleMapBoundsChange = (viewport) => {
+  mapLevel.value = viewport.zoomLevel;
+
+  clearTimeout(mapPropertyRequestTimer);
+
+  /**
+   * debounce 대기 중에도 이전 요청이 현재 화면을 덮지 못하게 한다.
+   */
+  propertyMapStore.cancelActiveRequest();
+
+  mapPropertyRequestTimer = setTimeout(
+    async () => {
+      try {
+        await propertyMapStore.getMapProperties(viewport);
+      } catch (error) {
+        handleMapPropertyError(error);
+      }
+    },
+    400,
+  );
+};
+
+/**
+ * 지역 집계 마커를 선택하면 Region bounds로 지도를 확대한다.
+ */
+const handleRegionAggregateSelect = async (region) => {
+  appliedRegion.value = region;
+  displayedRegion.value = region;
+
+  await requestRegionDetail(
+    region.regionId,
+    mapLevel.value,
+    {
+      fitMap: true,
+      maximumLevel: Number(region.regionLevel) === 3 ? 7 : null,
+    },
+  );
+};
+
+const handleMapPropertySelect = (property) => {
+  propertyMapStore.selectProperty(property.propertyId);
+};
+
+const handlePropertyCardSelect = (property) => {
+  propertyMapStore.selectProperty(property.propertyId);
+  kakaoMapRef.value?.focusProperty(property);
 };
 
 /**
@@ -551,6 +627,12 @@ onBeforeUnmount(()=>{
   clearTimeout(searchDebounceTimer);
 
   /**
+   * 지도 매물 조회 타이머와 진행 중인 요청 제거
+   */
+  clearTimeout(mapPropertyRequestTimer);
+  propertyMapStore.clearMapState();
+
+  /**
    * 화면 크기 변경 이벤트 제거
    */
   viewportMediaQuery?.removeEventListener(
@@ -567,12 +649,20 @@ onBeforeUnmount(()=>{
 
 <template>
   <section class="property-map-page">
+    <div class="property-map-stage">
     <!-- 카카오 지도 -->
     <KakaoMap
       ref="kakaoMapRef"
       :region-detail="regionStore.regionDetail"
+      :response-type="propertyMapStore.responseType"
+      :map-items="propertyMapStore.truncated ? [] : propertyMapStore.items"
+      :truncated="propertyMapStore.truncated"
+      :selected-property-id="propertyMapStore.selectedPropertyId"
       @ready="handleMapReady"
       @level-change="handleLevelChange"
+      @bounds-change="handleMapBoundsChange"
+      @select-region-aggregate="handleRegionAggregateSelect"
+      @select-property="handleMapPropertySelect"
       @map-error="handleError"
     />
 
@@ -677,6 +767,42 @@ onBeforeUnmount(()=>{
       </p>
     </div>
 
+    <div
+      v-if="propertyMapStore.truncated"
+      class="map-property-notice"
+      role="status"
+    >
+      매물이 많습니다. 지도를 확대해 주세요.
+    </div>
+
+    <div
+      v-else-if="
+        !propertyMapStore.isLoading &&
+        propertyMapStore.responseType &&
+        propertyMapStore.totalCount === 0
+      "
+      class="map-property-notice"
+      role="status"
+    >
+      현재 지도 영역에 매물이 없습니다.
+    </div>
+
+    <p
+      v-if="propertyMapStore.errorMessage"
+      class="map-property-error"
+      role="alert"
+    >
+      {{ propertyMapStore.errorMessage }}
+    </p>
+
+    <div
+      v-if="propertyMapStore.isLoading"
+      class="map-property-loading"
+      role="status"
+    >
+      매물을 불러오는 중입니다.
+    </div>
+
     <!-- 지도 우측 하단 버튼 -->
     <div class="map-floating-actions">
       <IconButton
@@ -701,6 +827,18 @@ onBeforeUnmount(()=>{
     >
       지역 경계를 불러오는 중입니다.
     </div>
+
+    </div>
+
+    <PropertyMapList
+      v-if="
+        !propertyMapStore.truncated &&
+        propertyMapStore.responseType !== 'REGION_AGGREGATE'
+      "
+      :items="propertyMapStore.propertyItems"
+      :selected-property-id="propertyMapStore.selectedPropertyId"
+      @select-property="handlePropertyCardSelect"
+    />
   </section>
 </template>
 
@@ -708,17 +846,16 @@ onBeforeUnmount(()=>{
 .property-map-page {
   position: relative;
   width: 100%;
+  min-height: calc(100dvh - var(--zipda-bottom-nav-height));
+  background: var(--zipda-color-white);
+}
 
-  /*
-   * App.vue가 BottomNavBar 공간을 
-   * padding으로 확보하므로 지도 화면이
-   * 불필요하게 세로 스크롤되지 않도록 한다.
-   */
-  height: calc(
-    100dvh -
-    var(--zipda-bottom-nav-height)
-  );
-
+.property-map-stage {
+  position: relative;
+  width: 100%;
+  height: 58dvh;
+  min-height: 380px;
+  max-height: 560px;
   overflow: hidden;
   background: var(--zipda-color-disabled);
 }
@@ -834,6 +971,49 @@ onBeforeUnmount(()=>{
   transform: translateX(-50%);
 }
 
+.map-property-notice,
+.map-property-error,
+.map-property-loading {
+  position: absolute;
+  left: 50%;
+  z-index: 25;
+  transform: translateX(-50%);
+}
+
+.map-property-notice {
+  top: 126px;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  padding: 10px 14px;
+  color: var(--zipda-color-text);
+  background: rgb(255 255 255 / 94%);
+  border-radius: 9999px;
+  box-shadow: var(--zipda-shadow-app);
+  font-size: 12px;
+  text-align: center;
+}
+
+.map-property-error {
+  top: 126px;
+  width: calc(100% - 32px);
+  padding: 10px 14px;
+  color: var(--zipda-color-danger);
+  background: var(--zipda-color-danger-light);
+  border-radius: var(--zipda-radius-medium);
+  font-size: 12px;
+  text-align: center;
+}
+
+.map-property-loading {
+  bottom: 24px;
+  padding: 9px 14px;
+  color: var(--zipda-color-white);
+  background: rgb(32 33 31 / 80%);
+  border-radius: 9999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 @media (min-width: 768px) {
   /*
    * 데스크톱에서는 BottomNavBar가 없으므로
@@ -841,6 +1021,14 @@ onBeforeUnmount(()=>{
    */
   .property-map-page {
     height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .property-map-stage {
+    height: 100%;
+    min-height: 0;
+    max-height: none;
   }
 
   /*
@@ -901,6 +1089,25 @@ onBeforeUnmount(()=>{
    */
   .map-loading {
     bottom: 32px;
+  }
+
+  .map-property-notice,
+  .map-property-error {
+    top: 24px;
+    right: 24px;
+    left: auto;
+    transform: none;
+  }
+
+  .map-property-error {
+    width: min(360px, calc(100% - 48px));
+  }
+
+  .map-property-loading {
+    right: 24px;
+    bottom: 24px;
+    left: auto;
+    transform: none;
   }
 }
 </style>

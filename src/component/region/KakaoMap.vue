@@ -7,10 +7,27 @@ import {
 } from "vue";
 
 import { loadKakaoMapSdk } from "../../util/kakao/LoadKakaoMapSdk.js";
+import { formatPropertyPrice } from "../../util/property/formatPropertyPrice.js";
 
 const props = defineProps({
   regionDetail: {
     type: Object,
+    default: null,
+  },
+  responseType: {
+    type: String,
+    default: "",
+  },
+  mapItems: {
+    type: Array,
+    default: () => [],
+  },
+  truncated: {
+    type: Boolean,
+    default: false,
+  },
+  selectedPropertyId: {
+    type: [String, Number],
     default: null,
   },
 });
@@ -18,7 +35,10 @@ const props = defineProps({
 const emit = defineEmits([
   "ready",
   "level-change",
+  "bounds-change",
   "map-error",
+  "select-region-aggregate",
+  "select-property",
 ]);
 
 const mapContainer = shallowRef(null);
@@ -26,6 +46,240 @@ const map = shallowRef(null);
 const polygons = shallowRef([]);
 
 let kakaoApi = null;
+let markerClusterer = null;
+let propertyMarkers = [];
+let propertyMarkerListeners = [];
+let propertyOverlays = [];
+let mapResizeObserver = null;
+let mapRelayoutFrame = null;
+
+/**
+ * 현재 표시 중인 매물 마커·클러스터·오버레이를 제거한다.
+ */
+const clearPropertyLayers = () => {
+  markerClusterer?.clear();
+  markerClusterer = null;
+
+  propertyMarkerListeners.forEach(({ marker, handler }) => {
+    kakaoApi?.maps?.event?.removeListener(
+      marker,
+      "click",
+      handler,
+    );
+  });
+
+  propertyMarkers.forEach((marker) => {
+    marker.setMap(null);
+  });
+
+  propertyOverlays.forEach((overlay) => {
+    overlay.setMap(null);
+  });
+
+  propertyMarkers = [];
+  propertyMarkerListeners = [];
+  propertyOverlays = [];
+};
+
+/**
+ * 현재 카카오 지도의 bounds와 확대 수준을 반환한다.
+ */
+const getViewport = () => {
+  if (!map.value) {
+    return null;
+  }
+
+  const bounds = map.value.getBounds();
+  const southWest = bounds.getSouthWest();
+  const northEast = bounds.getNorthEast();
+
+  return {
+    minLat: southWest.getLat(),
+    minLng: southWest.getLng(),
+    maxLat: northEast.getLat(),
+    maxLng: northEast.getLng(),
+    zoomLevel: map.value.getLevel(),
+  };
+};
+
+const emitViewport = () => {
+  const viewport = getViewport();
+
+  if (viewport) {
+    emit("bounds-change", viewport);
+  }
+};
+
+/**
+ * 반응형 레이아웃 변경 후 카카오 지도가 현재 컨테이너 크기를
+ * 다시 계산하도록 한다. relayout 과정에서 기존 중심은 유지한다.
+ */
+const relayoutMap = () => {
+  if (
+    !map.value ||
+    !mapContainer.value ||
+    mapContainer.value.clientWidth === 0 ||
+    mapContainer.value.clientHeight === 0
+  ) {
+    return;
+  }
+
+  const center = map.value.getCenter();
+
+  map.value.relayout();
+  map.value.setCenter(center);
+  emitViewport();
+};
+
+const scheduleMapRelayout = () => {
+  if (mapRelayoutFrame !== null) {
+    cancelAnimationFrame(mapRelayoutFrame);
+  }
+
+  mapRelayoutFrame = requestAnimationFrame(() => {
+    mapRelayoutFrame = null;
+    relayoutMap();
+  });
+};
+
+const createRegionAggregateOverlay = (item) => {
+  const button = document.createElement("button");
+  const name = document.createElement("span");
+  const count = document.createElement("strong");
+
+  button.type = "button";
+  button.className = "zipda-region-aggregate-marker";
+  button.setAttribute(
+    "aria-label",
+    `${item.regionName} 매물 ${item.propertyCount}개`,
+  );
+
+  name.textContent = item.regionName;
+  count.textContent = `${Number(item.propertyCount).toLocaleString("ko-KR")}개`;
+  button.append(name, count);
+
+  button.addEventListener("click", () => {
+    emit("select-region-aggregate", item);
+  });
+
+  return new kakaoApi.maps.CustomOverlay({
+    map: map.value,
+    position: new kakaoApi.maps.LatLng(
+      item.latitude,
+      item.longitude,
+    ),
+    content: button,
+    yAnchor: 0.5,
+  });
+};
+
+const createPropertyPriceOverlay = (item) => {
+  const button = document.createElement("button");
+
+  button.type = "button";
+  button.className = "zipda-property-price-marker";
+  button.textContent = formatPropertyPrice(item);
+  button.setAttribute("aria-label", `${item.title} ${button.textContent}`);
+
+  if (
+    String(item.propertyId) === String(props.selectedPropertyId)
+  ) {
+    button.classList.add("zipda-property-price-marker--selected");
+  }
+
+  button.addEventListener("click", () => {
+    emit("select-property", item);
+  });
+
+  return new kakaoApi.maps.CustomOverlay({
+    map: map.value,
+    position: new kakaoApi.maps.LatLng(
+      item.latitude,
+      item.longitude,
+    ),
+    content: button,
+    yAnchor: 1,
+  });
+};
+
+const renderRegionAggregates = () => {
+  propertyOverlays = props.mapItems.map(createRegionAggregateOverlay);
+};
+
+const renderPropertyPoints = () => {
+  if (!kakaoApi.maps.MarkerClusterer) {
+    emit(
+      "map-error",
+      new Error("카카오 지도 클러스터 라이브러리를 불러오지 못했습니다."),
+    );
+    return;
+  }
+
+  markerClusterer = new kakaoApi.maps.MarkerClusterer({
+    map: map.value,
+    averageCenter: true,
+    minLevel: 5,
+    gridSize: 60,
+    disableClickZoom: false,
+  });
+
+  propertyMarkers = props.mapItems.map((item) => {
+    const marker = new kakaoApi.maps.Marker({
+      position: new kakaoApi.maps.LatLng(
+        item.latitude,
+        item.longitude,
+      ),
+      title: item.title,
+    });
+
+    const handleMarkerClick = () => {
+      emit("select-property", item);
+    };
+
+    kakaoApi.maps.event.addListener(
+      marker,
+      "click",
+      handleMarkerClick,
+    );
+
+    propertyMarkerListeners.push({
+      marker,
+      handler: handleMarkerClick,
+    });
+
+    return marker;
+  });
+
+  markerClusterer.addMarkers(propertyMarkers);
+};
+
+const renderPropertyMarkers = () => {
+  propertyOverlays = props.mapItems.map(createPropertyPriceOverlay);
+};
+
+const renderPropertyLayers = () => {
+  clearPropertyLayers();
+
+  if (
+    !map.value ||
+    props.truncated ||
+    props.mapItems.length === 0
+  ) {
+    return;
+  }
+
+  switch (props.responseType) {
+    case "REGION_AGGREGATE":
+      renderRegionAggregates();
+      break;
+    case "PROPERTY_POINTS":
+      renderPropertyPoints();
+      break;
+    case "PROPERTY_MARKER":
+      renderPropertyMarkers();
+      break;
+  }
+};
 
 /**
  * 표시 중인 경계 제거
@@ -145,7 +399,7 @@ const renderRegionDetail = (detail) => {
 /**
  * 새로운 지역을 지도에 처음 적용할 때만 호출한다.
  */
-const fitToRegion = (detail) =>{
+const fitToRegion = (detail, { maximumLevel = null } = {}) =>{
   if(!map.value || !detail){
     return;
   }
@@ -159,6 +413,20 @@ const fitToRegion = (detail) =>{
     );
 
     map.value.setCenter(center);
+  }
+
+  /**
+   * 읍·면·동을 선택했을 때는 개별 공개 좌표를 조회할 수 있는
+   * 확대 단계까지 진입한다. 이미 더 가까이 확대된 경우에는
+   * 사용자의 현재 확대 수준을 유지한다.
+   */
+  if (
+    Number.isFinite(maximumLevel) &&
+    map.value.getLevel() > maximumLevel
+  ) {
+    map.value.setLevel(maximumLevel, {
+      anchor: map.value.getCenter(),
+    });
   }
 };
 
@@ -188,6 +456,22 @@ const moveToCurrentLocation = () => {
 };
 
 /**
+ * 목록에서 선택한 매물의 공개 좌표로 지도를 이동한다.
+ */
+const focusProperty = (item) => {
+  if (!map.value || !item) {
+    return;
+  }
+
+  map.value.panTo(
+    new kakaoApi.maps.LatLng(
+      item.latitude,
+      item.longitude,
+    ),
+  );
+};
+
+/**
  * 지도 초기화
  */
 const initializeMap = async () => {
@@ -210,10 +494,27 @@ const initializeMap = async () => {
         },
       );
 
+    /**
+     * 모바일·데스크톱 미디어쿼리 전환뿐 아니라 최초 렌더링에서
+     * 확정되는 컨테이너 크기도 감지하여 지도 크기를 동기화한다.
+     */
+    if (typeof ResizeObserver !== "undefined") {
+      mapResizeObserver = new ResizeObserver(scheduleMapRelayout);
+      mapResizeObserver.observe(mapContainer.value);
+    }
+
+    scheduleMapRelayout();
+
     kakaoApi.maps.event.addListener(
       map.value,
       "zoom_changed",
       handleLevelChange,
+    );
+
+    kakaoApi.maps.event.addListener(
+      map.value,
+      "idle",
+      emitViewport,
     );
 
     emit(
@@ -226,6 +527,9 @@ const initializeMap = async () => {
         props.regionDetail,
       );
     }
+
+    renderPropertyLayers();
+    emitViewport();
   } catch (error) {
     emit("map-error", error);
   }
@@ -249,10 +553,30 @@ watch(
   },
 );
 
+watch(
+  () => [
+    props.responseType,
+    props.mapItems,
+    props.truncated,
+    props.selectedPropertyId,
+  ],
+  renderPropertyLayers,
+  { deep: true },
+);
+
 onMounted(initializeMap);
 
 onBeforeUnmount(() => {
+  mapResizeObserver?.disconnect();
+  mapResizeObserver = null;
+
+  if (mapRelayoutFrame !== null) {
+    cancelAnimationFrame(mapRelayoutFrame);
+    mapRelayoutFrame = null;
+  }
+
   clearPolygons();
+  clearPropertyLayers();
 
   if (map.value && kakaoApi) {
     kakaoApi.maps.event.removeListener(
@@ -260,12 +584,21 @@ onBeforeUnmount(() => {
       "zoom_changed",
       handleLevelChange,
     );
+
+    kakaoApi.maps.event.removeListener(
+      map.value,
+      "idle",
+      emitViewport,
+    );
   }
 });
 
 defineExpose({
   moveToCurrentLocation,
-  fitToRegion
+  fitToRegion,
+  focusProperty,
+  getViewport,
+  relayoutMap,
 });
 
 
@@ -284,5 +617,57 @@ defineExpose({
   width: 100%;
   height: 100%;
   background: var(--zipda-color-disabled);
+}
+</style>
+
+<!--
+  Kakao CustomOverlay의 DOM은 Vue의 scoped 속성을 받지 않으므로
+  충돌 가능성이 낮은 zipda 접두사 전역 클래스를 사용한다.
+-->
+<style>
+.zipda-region-aggregate-marker,
+.zipda-property-price-marker {
+  appearance: none;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 3px 10px rgb(32 33 31 / 18%);
+}
+
+.zipda-region-aggregate-marker {
+  display: grid;
+  gap: 2px;
+  min-width: 82px;
+  padding: 9px 13px;
+  color: #ffffff;
+  background: #516237;
+  border: 2px solid #ffffff;
+  border-radius: 9999px;
+  text-align: center;
+}
+
+.zipda-region-aggregate-marker span {
+  font-size: 11px;
+}
+
+.zipda-region-aggregate-marker strong {
+  font-size: 14px;
+}
+
+.zipda-property-price-marker {
+  padding: 8px 11px;
+  color: #20211f;
+  background: #ffffff;
+  border: 2px solid #718355;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.zipda-property-price-marker--selected {
+  color: #ffffff;
+  background: #516237;
+  border-color: #ffffff;
+  transform: scale(1.08);
 }
 </style>
