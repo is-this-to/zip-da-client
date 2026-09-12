@@ -13,9 +13,13 @@ const props = defineProps({
     type: [String, Number],
     default: null,
   },
+  sort: {
+    type: String,
+    default: "LATEST",
+  },
 });
 
-const emit = defineEmits(["select-property"]);
+const emit = defineEmits(["select-property", "change-sort"]);
 const cardElements = new Map();
 
 const propertyTypeLabel = (propertyType) => {
@@ -72,8 +76,22 @@ watch(
     aria-label="현재 지도 영역의 매물"
   >
     <div class="property-map-list__header">
-      <strong>현재 지도 매물</strong>
-      <span>{{ items.length }}개 표시</span>
+      <div class="property-map-list__summary">
+        <strong>현재 지도 매물</strong>
+        <span>{{ items.length }}개 표시</span>
+      </div>
+
+      <select
+        class="property-map-list__sort"
+        :value="sort"
+        aria-label="지도 매물 정렬"
+        @change="emit('change-sort', $event.target.value)"
+      >
+        <option value="LATEST">최신순</option>
+        <option value="PRICE_ASC">가격 낮은 순</option>
+        <option value="PRICE_DESC">가격 높은 순</option>
+        <option value="AREA_DESC">면적 넓은 순</option>
+      </select>
     </div>
 
     <div class="property-map-list__items">
@@ -128,8 +146,26 @@ watch(
   font-size: 12px;
 }
 
-.property-map-list__header span {
+.property-map-list__summary {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.property-map-list__summary span {
   color: var(--zipda-color-text-muted);
+}
+
+.property-map-list__sort {
+  flex: 0 0 auto;
+  max-width: 130px;
+  height: 34px;
+  padding: 0 8px;
+  color: var(--zipda-color-text);
+  background: var(--zipda-color-white);
+  border: 1px solid var(--zipda-color-border);
+  border-radius: var(--zipda-radius-medium);
+  font-size: 12px;
 }
 
 .property-map-list__items {

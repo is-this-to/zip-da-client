@@ -7,7 +7,10 @@ import {
 } from "vue";
 
 import { loadKakaoMapSdk } from "../../util/kakao/LoadKakaoMapSdk.js";
+import { groupNearbyMapItems } from "../../util/kakao/groupNearbyMapItems.js";
 import { formatPropertyPrice } from "../../util/property/formatPropertyPrice.js";
+
+const PROPERTY_MARKER_GROUP_DISTANCE_PIXELS = 60;
 
 const props = defineProps({
   regionDetail: {
@@ -202,6 +205,53 @@ const createPropertyPriceOverlay = (item) => {
   });
 };
 
+const createPropertyGroupOverlay = (items) => {
+  const button = document.createElement("button");
+  const latitude =
+    items.reduce((sum, item) => sum + Number(item.latitude), 0) /
+    items.length;
+  const longitude =
+    items.reduce((sum, item) => sum + Number(item.longitude), 0) /
+    items.length;
+  const position = new kakaoApi.maps.LatLng(latitude, longitude);
+  const includesSelectedProperty = items.some(
+    (item) =>
+      String(item.propertyId) === String(props.selectedPropertyId),
+  );
+
+  button.type = "button";
+  button.className = "zipda-property-group-marker";
+  button.textContent = `매물 ${items.length.toLocaleString("ko-KR")}개`;
+  button.setAttribute(
+    "aria-label",
+    `가까운 매물 ${items.length.toLocaleString("ko-KR")}개, 지도를 확대합니다.`,
+  );
+
+  if (includesSelectedProperty) {
+    button.classList.add("zipda-property-group-marker--selected");
+  }
+
+  button.addEventListener("click", () => {
+    const currentLevel = map.value.getLevel();
+
+    if (currentLevel > 1) {
+      map.value.setLevel(currentLevel - 1, {
+        anchor: position,
+      });
+      return;
+    }
+
+    map.value.panTo(position);
+  });
+
+  return new kakaoApi.maps.CustomOverlay({
+    map: map.value,
+    position,
+    content: button,
+    yAnchor: 1,
+  });
+};
+
 const renderRegionAggregates = () => {
   propertyOverlays = props.mapItems.map(createRegionAggregateOverlay);
 };
@@ -254,7 +304,28 @@ const renderPropertyPoints = () => {
 };
 
 const renderPropertyMarkers = () => {
-  propertyOverlays = props.mapItems.map(createPropertyPriceOverlay);
+  const projection = map.value.getProjection();
+  const positionedItems = props.mapItems.map((item) => {
+    const point = projection.containerPointFromCoords(
+      new kakaoApi.maps.LatLng(item.latitude, item.longitude),
+    );
+
+    return {
+      item,
+      x: point.x,
+      y: point.y,
+    };
+  });
+  const groupedItems = groupNearbyMapItems(
+    positionedItems,
+    PROPERTY_MARKER_GROUP_DISTANCE_PIXELS,
+  );
+
+  propertyOverlays = groupedItems.map((items) =>
+    items.length === 1
+      ? createPropertyPriceOverlay(items[0])
+      : createPropertyGroupOverlay(items),
+  );
 };
 
 const renderPropertyLayers = () => {
@@ -626,7 +697,8 @@ defineExpose({
 -->
 <style>
 .zipda-region-aggregate-marker,
-.zipda-property-price-marker {
+.zipda-property-price-marker,
+.zipda-property-group-marker {
   appearance: none;
   cursor: pointer;
   font-family: inherit;
@@ -668,6 +740,22 @@ defineExpose({
   color: #ffffff;
   background: #516237;
   border-color: #ffffff;
+  transform: scale(1.08);
+}
+
+.zipda-property-group-marker {
+  padding: 8px 12px;
+  color: #ffffff;
+  background: #d7a52b;
+  border: 2px solid #ffffff;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.zipda-property-group-marker--selected {
+  background: #516237;
   transform: scale(1.08);
 }
 </style>
