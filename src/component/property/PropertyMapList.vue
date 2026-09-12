@@ -184,16 +184,14 @@ watch(
 
 @media (min-width: 768px) {
   .property-map-list {
-    position: absolute;
-    top: 130px;
-    bottom: 24px;
-    left: 24px;
-    z-index: 20;
+    position: static;
     grid-template-rows: auto minmax(0, 1fr);
-    width: 420px;
-    padding: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 0 24px 24px;
     overflow: hidden;
-    background: transparent;
+    background: var(--zipda-color-white);
   }
 
   .property-map-list__header {

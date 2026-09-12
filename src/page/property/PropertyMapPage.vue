@@ -666,107 +666,6 @@ onBeforeUnmount(()=>{
       @map-error="handleError"
     />
 
-    <!-- 지도 상단 검색 영역 -->
-    <div 
-      class="map-top-overlay"
-      :class="{'map-top-overlay--selector-open':isRegionSelectorOpen}"
-      >
-      <div class="map-search-row">
-        <button
-          type="button"
-          class="map-search-button"
-          :aria-expanded="isRegionSelectorOpen"
-          @click="
-            isRegionSelectorOpen =
-              !isRegionSelectorOpen
-          "
-        >
-          <span aria-hidden="true">⌕</span>
-          <span>{{ selectedRegionName }}</span>
-        </button>
-
-        <IconButton
-          icon="☷"
-          label="검색 필터 열기"
-        />
-      </div>
-
-      <!-- 매물 API 연결 전에는 화면 구조만 준비 -->
-      <div class="property-type-chips">
-        <button
-          type="button"
-          class="property-chip property-chip--active"
-        >
-          전체
-        </button>
-
-        <button
-          type="button"
-          class="property-chip"
-        >
-          아파트
-        </button>
-
-        <button
-          type="button"
-          class="property-chip"
-        >
-          오피스텔
-        </button>
-
-        <button
-          type="button"
-          class="property-chip"
-        >
-          빌라
-        </button>
-
-        <button
-          type="button"
-          class="property-chip"
-        >
-          원룸·투룸+
-        </button>
-      </div>
-      
-      <!-- 지역 선택 및 지역명 검색 -->
-      <RegionSelector
-        :open="isRegionSelectorOpen"
-        
-        :sido-regions="regionStore.sidoRegions"
-        :sigungu-regions="regionStore.sigunguRegions"
-        :emd-regions="regionStore.emdRegions"
-        
-        :search-keyword="searchKeyword"
-        :search-results="regionStore.searchResults"
-        :is-search-loading="isSearchPending || regionStore.isSearchLoading"
-        :search-error-message="searchErrorMessage"
-
-        :selected-sido-id="regionStore.selectedSido?.regionId ?? null"
-        :selected-sigungu-id="regionStore.selectedSigungu?.regionId ?? null"
-        :selected-emd-id="regionStore.selectedEmd?.regionId ?? null"
-        :selected-region-id="regionStore.selectedRegion?.regionId ?? null"
-
-        @update:search-keyword="handleSearchKeywordUpdate"
-        @select-search-region="handleSearchRegionSelect"
-
-        @select-sido="handleSidoSelect"
-        @select-sigungu="handleSigunguSelect"
-        @select-emd="handleEmdSelect"
-
-        @confirm="applySelectedRegion"
-        @close="closeRegionSelector"
-      />
-
-      <!-- 지역 상세·지도 오류 -->
-      <p
-        v-if="inlineErrorMessage"
-        class="map-error-message"
-      >
-        {{ inlineErrorMessage }}
-      </p>
-    </div>
-
     <div
       v-if="propertyMapStore.truncated"
       class="map-property-notice"
@@ -830,15 +729,106 @@ onBeforeUnmount(()=>{
 
     </div>
 
-    <PropertyMapList
-      v-if="
-        !propertyMapStore.truncated &&
-        propertyMapStore.responseType !== 'REGION_AGGREGATE'
-      "
-      :items="propertyMapStore.propertyItems"
-      :selected-property-id="propertyMapStore.selectedPropertyId"
-      @select-property="handlePropertyCardSelect"
-    />
+    <aside
+      class="property-map-sidebar"
+      aria-label="지역 검색 및 지도 매물 목록"
+    >
+      <!-- 지도 상단 검색 영역 -->
+      <div
+        class="map-top-overlay"
+        :class="{'map-top-overlay--selector-open':isRegionSelectorOpen}"
+      >
+        <div class="map-search-row">
+          <button
+            type="button"
+            class="map-search-button"
+            :aria-expanded="isRegionSelectorOpen"
+            @click="isRegionSelectorOpen = !isRegionSelectorOpen"
+          >
+            <span aria-hidden="true">⌕</span>
+            <span>{{ selectedRegionName }}</span>
+          </button>
+
+          <IconButton
+            icon="☷"
+            label="검색 필터 열기"
+          />
+        </div>
+
+        <!-- 매물 API 연결 전에는 화면 구조만 준비 -->
+        <div class="property-type-chips">
+          <button
+            type="button"
+            class="property-chip property-chip--active"
+          >
+            전체
+          </button>
+
+          <button type="button" class="property-chip">
+            아파트
+          </button>
+
+          <button type="button" class="property-chip">
+            오피스텔
+          </button>
+
+          <button type="button" class="property-chip">
+            빌라
+          </button>
+
+          <button type="button" class="property-chip">
+            원룸·투룸+
+          </button>
+        </div>
+
+        <!-- 지역 선택 및 지역명 검색 -->
+        <RegionSelector
+          :open="isRegionSelectorOpen"
+
+          :sido-regions="regionStore.sidoRegions"
+          :sigungu-regions="regionStore.sigunguRegions"
+          :emd-regions="regionStore.emdRegions"
+
+          :search-keyword="searchKeyword"
+          :search-results="regionStore.searchResults"
+          :is-search-loading="isSearchPending || regionStore.isSearchLoading"
+          :search-error-message="searchErrorMessage"
+
+          :selected-sido-id="regionStore.selectedSido?.regionId ?? null"
+          :selected-sigungu-id="regionStore.selectedSigungu?.regionId ?? null"
+          :selected-emd-id="regionStore.selectedEmd?.regionId ?? null"
+          :selected-region-id="regionStore.selectedRegion?.regionId ?? null"
+
+          @update:search-keyword="handleSearchKeywordUpdate"
+          @select-search-region="handleSearchRegionSelect"
+
+          @select-sido="handleSidoSelect"
+          @select-sigungu="handleSigunguSelect"
+          @select-emd="handleEmdSelect"
+
+          @confirm="applySelectedRegion"
+          @close="closeRegionSelector"
+        />
+
+        <!-- 지역 상세·지도 오류 -->
+        <p
+          v-if="inlineErrorMessage"
+          class="map-error-message"
+        >
+          {{ inlineErrorMessage }}
+        </p>
+      </div>
+
+      <PropertyMapList
+        v-if="
+          !propertyMapStore.truncated &&
+          propertyMapStore.responseType !== 'REGION_AGGREGATE'
+        "
+        :items="propertyMapStore.propertyItems"
+        :selected-property-id="propertyMapStore.selectedPropertyId"
+        @select-property="handlePropertyCardSelect"
+      />
+    </aside>
   </section>
 </template>
 
@@ -848,6 +838,10 @@ onBeforeUnmount(()=>{
   width: 100%;
   min-height: calc(100dvh - var(--zipda-bottom-nav-height));
   background: var(--zipda-color-white);
+}
+
+.property-map-sidebar {
+  display: contents;
 }
 
 .property-map-stage {
@@ -1020,15 +1014,34 @@ onBeforeUnmount(()=>{
    * 지도 페이지가 브라우저 전체 높이를 사용한다.
    */
   .property-map-page {
+    display: grid;
+    grid-template-columns: clamp(340px, 30vw, 420px) minmax(0, 1fr);
     height: 100dvh;
     min-height: 0;
     overflow: hidden;
   }
 
   .property-map-stage {
+    grid-column: 2;
+    grid-row: 1;
     height: 100%;
     min-height: 0;
     max-height: none;
+  }
+
+  .property-map-sidebar {
+    position: relative;
+    z-index: 30;
+    display: grid;
+    grid-column: 1;
+    grid-row: 1;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--zipda-color-white);
+    border-right: 1px solid var(--zipda-color-border);
+    box-shadow: 6px 0 20px rgb(32 33 31 / 8%);
   }
 
   /*
@@ -1036,21 +1049,11 @@ onBeforeUnmount(()=>{
    * 지도 왼쪽의 고정 너비 패널로 만든다.
    */
   .map-top-overlay {
-    top: 0;
-    right: auto;
-    left: 0;
-
-    width: min(
-      420px,
-      calc(100vw - 48px)
-    );
-
-    padding: 24px;
-
-    /*
-     * 모바일에서 사용한 전체 너비 그라데이션을 제거한다.
-     */
-    background: transparent;
+    position: relative;
+    inset: auto;
+    width: 100%;
+    padding: 24px 24px 16px;
+    background: var(--zipda-color-white);
   }
 
   /*
