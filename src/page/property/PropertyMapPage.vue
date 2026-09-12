@@ -15,6 +15,10 @@ import IconButton from "../../component/button/IconButton.vue";
 import KakaoMap from "../../component/region/KakaoMap.vue";
 import RegionSelector from "../../component/region/RegionSelector.vue";
 import PropertyMapList from "../../component/property/PropertyMapList.vue";
+import PropertyMapFilterPanel from "../../component/property/PropertyMapFilterPanel.vue";
+import {
+  getAppliedPropertyMapFilterChips,
+} from "../../util/property/propertyMapFilter.js";
 
 
 const regionStore = useRegionStore();
@@ -27,6 +31,11 @@ const kakaoMapRef = shallowRef(null);
  * 지역 선택창 상태
  */
 const isRegionSelectorOpen = ref(false);
+
+/**
+ * 지도 매물 필터 패널 상태
+ */
+const isFilterPanelOpen = ref(false);
 
 /**
  * 현재 카카오 지도 확대 단계
@@ -103,6 +112,30 @@ const selectedRegionName = computed(()=>{
     appliedRegion.value?.regionName ?? "지역·단지·키워드 검색"
   );
 });
+
+const propertyTypeChips = [
+  { value: null, label: "전체" },
+  { value: "APARTMENT", label: "아파트" },
+  { value: "OFFICETEL", label: "오피스텔" },
+  { value: "VILLA", label: "빌라" },
+  { value: "ROOM", label: "원룸·투룸+" },
+];
+
+const appliedFilterChips = computed(() =>
+  getAppliedPropertyMapFilterChips(
+    propertyMapStore.appliedFilters,
+  ),
+);
+
+const isPropertyTypeChipActive = (propertyType) => {
+  const selected = propertyMapStore.appliedFilters.propertyTypes;
+
+  if (propertyType === null) {
+    return selected.length === 0;
+  }
+
+  return selected.length === 1 && selected[0] === propertyType;
+};
 
 
 /**
@@ -357,6 +390,11 @@ const closeRegionSelector = () => {
   isRegionSelectorOpen.value = false;
 };
 
+const toggleRegionSelector = () => {
+  isFilterPanelOpen.value = false;
+  isRegionSelectorOpen.value = !isRegionSelectorOpen.value;
+};
+
 /**
  * 카카오 지도 생성 완료
  */
@@ -418,6 +456,42 @@ const handleMapBoundsChange = (viewport) => {
     },
     400,
   );
+};
+
+/**
+ * 필터·정렬이 변경된 경우 현재 지도 bounds를 유지하고 다시 조회한다.
+ */
+const requestCurrentMapProperties = () => {
+  const viewport = kakaoMapRef.value?.getViewport();
+
+  if (viewport) {
+    handleMapBoundsChange(viewport);
+  }
+};
+
+const openFilterPanel = () => {
+  isRegionSelectorOpen.value = false;
+  isFilterPanelOpen.value = true;
+};
+
+const applyMapFilters = (filters) => {
+  propertyMapStore.setAppliedFilters(filters);
+  isFilterPanelOpen.value = false;
+  requestCurrentMapProperties();
+};
+
+const applyPropertyTypeChip = (propertyType) => {
+  propertyMapStore.setPropertyTypeFilter(propertyType);
+  requestCurrentMapProperties();
+};
+
+const handleSortChange = (sort) => {
+  propertyMapStore.setAppliedFilters({
+    ...propertyMapStore.appliedFilters,
+    sort,
+  });
+
+  requestCurrentMapProperties();
 };
 
 /**
@@ -743,43 +817,52 @@ onBeforeUnmount(()=>{
             type="button"
             class="map-search-button"
             :aria-expanded="isRegionSelectorOpen"
-            @click="isRegionSelectorOpen = !isRegionSelectorOpen"
+            @click="toggleRegionSelector"
           >
             <span aria-hidden="true">⌕</span>
             <span>{{ selectedRegionName }}</span>
           </button>
 
-          <IconButton
-            icon="☷"
-            label="검색 필터 열기"
-          />
+          <div class="map-filter-trigger">
+            <IconButton
+              icon="☷"
+              label="검색 필터 열기"
+              :pressed="isFilterPanelOpen"
+              @click="openFilterPanel"
+            />
+
+            <span
+              v-if="appliedFilterChips.length > 0"
+              class="map-filter-trigger__badge"
+              aria-hidden="true"
+            >
+              {{ appliedFilterChips.length }}
+            </span>
+          </div>
         </div>
 
-        <!-- 매물 API 연결 전에는 화면 구조만 준비 -->
         <div class="property-type-chips">
           <button
+            v-for="chip in propertyTypeChips"
+            :key="chip.value ?? 'ALL'"
             type="button"
-            class="property-chip property-chip--active"
+            class="property-chip"
+            :class="{
+              'property-chip--active': isPropertyTypeChipActive(chip.value),
+            }"
+            :aria-pressed="isPropertyTypeChipActive(chip.value)"
+            @click="applyPropertyTypeChip(chip.value)"
           >
-            전체
-          </button>
-
-          <button type="button" class="property-chip">
-            아파트
-          </button>
-
-          <button type="button" class="property-chip">
-            오피스텔
-          </button>
-
-          <button type="button" class="property-chip">
-            빌라
-          </button>
-
-          <button type="button" class="property-chip">
-            원룸·투룸+
+            {{ chip.label }}
           </button>
         </div>
+
+        <PropertyMapFilterPanel
+          :open="isFilterPanelOpen"
+          :applied-filters="propertyMapStore.appliedFilters"
+          @close="isFilterPanelOpen = false"
+          @apply="applyMapFilters"
+        />
 
         <!-- 지역 선택 및 지역명 검색 -->
         <RegionSelector
@@ -826,7 +909,9 @@ onBeforeUnmount(()=>{
         "
         :items="propertyMapStore.propertyItems"
         :selected-property-id="propertyMapStore.selectedPropertyId"
+        :sort="propertyMapStore.appliedFilters.sort"
         @select-property="handlePropertyCardSelect"
+        @change-sort="handleSortChange"
       />
     </aside>
   </section>
@@ -882,6 +967,28 @@ onBeforeUnmount(()=>{
   gap: 8px;
 }
 
+.map-filter-trigger {
+  position: relative;
+}
+
+.map-filter-trigger__badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  color: var(--zipda-color-white);
+  background: var(--zipda-color-primary-active);
+  border: 2px solid var(--zipda-color-white);
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
 .map-search-button {
   display: flex;
   align-items: center;
@@ -906,26 +1013,24 @@ onBeforeUnmount(()=>{
 }
 
 .property-type-chips {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.property-type-chips::-webkit-scrollbar {
-  display: none;
 }
 
 .property-chip {
-  flex: 0 0 auto;
+  min-width: 0;
   height: 34px;
-  padding: 0 16px;
+  padding: 0 8px;
+  overflow: hidden;
   color: var(--zipda-color-text);
   background: #e9f5db;
   border: 1px solid var(--zipda-color-border);
   border-radius: 9999px;
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -975,7 +1080,7 @@ onBeforeUnmount(()=>{
 }
 
 .map-property-notice {
-  top: 126px;
+  bottom: 24px;
   width: max-content;
   max-width: calc(100% - 32px);
   padding: 10px 14px;
@@ -988,7 +1093,7 @@ onBeforeUnmount(()=>{
 }
 
 .map-property-error {
-  top: 126px;
+  bottom: 24px;
   width: calc(100% - 32px);
   padding: 10px 14px;
   color: var(--zipda-color-danger);
@@ -1098,6 +1203,7 @@ onBeforeUnmount(()=>{
   .map-property-error {
     top: 24px;
     right: 24px;
+    bottom: auto;
     left: auto;
     transform: none;
   }

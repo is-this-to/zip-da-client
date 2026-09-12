@@ -2,6 +2,11 @@ import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 
 import myAxios from "../../api/myAxios.js";
+import {
+  buildPropertyMapQueryParams,
+  createPropertyMapFilters,
+  normalizePropertyMapFilters,
+} from "../../util/property/propertyMapFilter.js";
 
 export const usePropertyMapStore = defineStore("propertyMapStore", () => {
   const responseType = ref("");
@@ -11,6 +16,7 @@ export const usePropertyMapStore = defineStore("propertyMapStore", () => {
   const isLoading = ref(false);
   const errorMessage = ref("");
   const selectedPropertyId = ref(null);
+  const appliedFilters = ref(createPropertyMapFilters());
 
   let requestSequence = 0;
   let activeAbortController = null;
@@ -69,13 +75,10 @@ export const usePropertyMapStore = defineStore("propertyMapStore", () => {
       const response = await myAxios.get(
         "/api/property/properties/map",
         {
-          params: {
-            minLat: viewport.minLat,
-            minLng: viewport.minLng,
-            maxLat: viewport.maxLat,
-            maxLng: viewport.maxLng,
-            zoomLevel: viewport.zoomLevel,
-          },
+          params: buildPropertyMapQueryParams(
+            viewport,
+            appliedFilters.value,
+          ),
           signal: abortController.signal,
         },
       );
@@ -136,6 +139,22 @@ export const usePropertyMapStore = defineStore("propertyMapStore", () => {
       propertyId === null ? null : String(propertyId);
   };
 
+  const setAppliedFilters = (filters) => {
+    appliedFilters.value = normalizePropertyMapFilters(filters);
+    selectedPropertyId.value = null;
+
+    return appliedFilters.value;
+  };
+
+  const setPropertyTypeFilter = (propertyType) => {
+    return setAppliedFilters({
+      ...appliedFilters.value,
+      propertyTypes: propertyType ? [propertyType] : [],
+      roomCountMin: null,
+      roomCountMax: null,
+    });
+  };
+
   const clearMapState = () => {
     cancelActiveRequest();
     responseType.value = "";
@@ -156,9 +175,12 @@ export const usePropertyMapStore = defineStore("propertyMapStore", () => {
     errorMessage,
     selectedPropertyId,
     selectedProperty,
+    appliedFilters,
     getMapProperties,
     cancelActiveRequest,
     selectProperty,
+    setAppliedFilters,
+    setPropertyTypeFilter,
     clearMapState,
   };
 });
