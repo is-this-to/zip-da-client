@@ -6,20 +6,23 @@ import HeartIcon from '../icon/HeartIcon.vue'
 import { useFavoriteStore } from '../../store/favorite/useFavoriteStore.js'
 
 const props = defineProps({
-  /**
-   * 찜할 매물 ID
-   */
   propertyId: {
     type: [Number, String],
     required: true,
   },
 
-  /**
-   * 최초 찜 여부
-   */
   initialFavorite: {
     type: Boolean,
     default: false,
+  },
+
+  appearance: {
+    type: String,
+    default: 'default',
+    validator: (value) => [
+      'default',
+      'overlay',
+    ].includes(value),
   },
 })
 
@@ -29,16 +32,8 @@ const emit = defineEmits([
 ])
 
 const favoriteStore = useFavoriteStore()
-
-/**
- * 현재 화면에 표시할 찜 상태
- */
 const isFavorite = ref(props.initialFavorite)
 
-/**
- * 부모에서 찜 상태가 변경되면
- * 버튼 상태도 동기화한다.
- */
 watch(
   () => props.initialFavorite,
   (value) => {
@@ -46,23 +41,19 @@ watch(
   },
 )
 
-/**
- * 찜 등록/해제
- */
 const handleFavoriteClick = async () => {
   try {
+    const targetFavorite = !isFavorite.value
+
     const result = await favoriteStore.toggleFavorite(
-      props.propertyId,
+      String(props.propertyId),
+      targetFavorite,
     )
 
-    /**
-     * 백엔드가 최종 찜 상태를 반환하면
-     * 서버 결과를 기준으로 화면 상태를 변경한다.
-     */
     if (typeof result?.favorite === 'boolean') {
       isFavorite.value = result.favorite
     } else {
-      isFavorite.value = !isFavorite.value
+      isFavorite.value = targetFavorite
     }
 
     emit(
@@ -81,21 +72,46 @@ const handleFavoriteClick = async () => {
 </script>
 
 <template>
-  <IconButton
-    :label="isFavorite ? '찜 해제' : '찜하기'"
-    :pressed="isFavorite"
-    :loading="favoriteStore.isFavoriteLoading"
-    @click="handleFavoriteClick"
+  <span
+    class="favorite-button"
+    :class="`favorite-button--${appearance}`"
   >
-    <HeartIcon
-      :filled="isFavorite"
-      class="favorite-heart"
-    />
-  </IconButton>
+    <IconButton
+      :label="isFavorite ? '찜 해제' : '찜하기'"
+      :pressed="isFavorite"
+      :loading="favoriteStore.isFavoriteLoading"
+      @click="handleFavoriteClick"
+    >
+      <HeartIcon
+        :filled="isFavorite"
+        class="favorite-heart"
+      />
+    </IconButton>
+  </span>
 </template>
 
 <style scoped>
+.favorite-button {
+  display: inline-flex;
+}
+
 .favorite-heart {
+  width: 20px;
+  height: 20px;
   color: #d93b32;
+}
+
+.favorite-button--overlay :deep(.icon-button) {
+  width: 36px;
+  height: 36px;
+  background: rgb(250 249 244 / 80%);
+  border: 0;
+  border-radius: 14px;
+  backdrop-filter: blur(2px);
+}
+
+.favorite-button--overlay :deep(.icon-button--pressed) {
+  color: #d93b32;
+  background: rgb(250 249 244 / 88%);
 }
 </style>
