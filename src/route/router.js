@@ -47,6 +47,11 @@ const routes = [
     meta: setMeta(false, false, [], true),
   },
   {
+    path: "/favorites",
+    component: () => import("../page/favorite/FavoriteListPage.vue"),
+    meta: setMeta(true, false, ["USER", "AGENT"], true),
+  },
+  {
     path: "/sign-in",
     component: SignIn,
     meta: setMeta(false, true),

@@ -50,7 +50,9 @@ export const loadKakaoMapSdk = ()=>{
       script.dataset.kakaoMapSdk = "true";
       script.async = true;
 
-      script.src = "https://dapi.kakao.com/v2/maps/sdk.js" + `?appkey=${appKey}&autoload=false`;
+      script.src =
+        "https://dapi.kakao.com/v2/maps/sdk.js" +
+        `?appkey=${appKey}&autoload=false&libraries=clusterer`;
 
       script.onload = ()=>{
         window.kakao.maps.load(()=>{
