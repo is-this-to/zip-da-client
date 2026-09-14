@@ -21,6 +21,13 @@ export const useMemberStore = defineStore("memberStore", () => {
     return application;
   };
 
+  const clearMemberState = () => {
+    // 로그인 회원 메모리 정보 초기화
+    agentApplication.value = null;
+    memberProfile.value = null;
+    agentProfile.value = null;
+  };
+
   const createAgentApplication = async () => {
     const response = await myAxios.post(APPLICATION_API);
     return setAgentApplication(response.data.data);
@@ -179,6 +186,7 @@ export const useMemberStore = defineStore("memberStore", () => {
     agentProfile,
     loadingProfile,
     savingProfile,
+    clearMemberState,
     initializeAgentApplication,
     getCurrentAgentApplication,
     uploadAgentDocument,
