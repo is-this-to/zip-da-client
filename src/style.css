@@ -66,6 +66,12 @@
 
 html {
   min-width: 320px;
+  /*
+   * 모바일 반응형 화면에서 지도 bounds 재조회 중 매물 목록이
+   * 로딩 상태로 전환되어도 문서 폭이 달라지지 않게 한다.
+   * 문서 스크롤바 생성·제거로 인한 지도 ResizeObserver 반복을 방지한다.
+   */
+  scrollbar-gutter: stable;
   color: var(--zipda-color-text);
   background: var(--zipda-color-background);
   font-family: var(--zipda-font-family);
