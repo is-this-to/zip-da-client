@@ -94,7 +94,6 @@ onMounted(async () => {
 <template>
   <section class="page favorite-page">
     <Header
-      class="favorite-page__header"
       :title="favoriteTitle"
       show-back
     />
@@ -196,21 +195,6 @@ onMounted(async () => {
   width: 100%;
   min-height: 100dvh;
   background: #ffffff;
-}
-
-.favorite-page :deep(.favorite-page__header) {
-  height: 56px;
-  background: #ffffff;
-  border-bottom-color: #dde5d4;
-}
-
-.favorite-page :deep(
-  .favorite-page__header .app-header__title
-) {
-  color: #516237;
-  font-size: 18px;
-  line-height: 24px;
-  text-align: center;
 }
 
 .favorite-page__content {

@@ -114,6 +114,14 @@ export const useMemberStore = defineStore("memberStore", () => {
     }
   };
 
+  const checkNicknameDuplicate = async (nickname) => {
+    const response = await myAxios.post("/api/member/member-validations", {
+      typePolicy: "NICKNAME",
+      value: nickname,
+    });
+    return response.data.data;
+  };
+
   const uploadMyProfileImage = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -194,6 +202,7 @@ export const useMemberStore = defineStore("memberStore", () => {
     submitAgentApplication,
     getMyProfile,
     updateMyProfile,
+    checkNicknameDuplicate,
     uploadMyProfileImage,
     sendPasswordVerification,
     verifyPasswordCode,
