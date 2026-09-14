@@ -108,7 +108,10 @@ const handleImageError = () => {
       </div>
     </div>
 
-    <div class="favorite-card__body">
+    <RouterLink
+      class="favorite-card__body"
+      :to="`/properties/${item.propertyId}`"
+    >
       <strong class="favorite-card__price">
         {{ priceText }}
       </strong>
@@ -120,7 +123,7 @@ const handleImageError = () => {
       <p class="favorite-card__meta">
         {{ metaText || propertyTypeLabel }}
       </p>
-    </div>
+    </RouterLink>
   </article>
 </template>
 
@@ -173,6 +176,8 @@ const handleImageError = () => {
   display: grid;
   gap: 4px;
   padding: 8px 4px;
+  color: inherit;
+  text-decoration: none;
 }
 
 .favorite-card__price {
