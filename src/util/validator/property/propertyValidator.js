@@ -66,11 +66,15 @@ const isValidPropertyAddress = (address) => Boolean(
   && isValidCoordinate(address.latitude, -90, 90),
 );
 
-export const hasPropertyIntegrationData = (draft) => Boolean(
+export const hasPropertyAddressIntegrationData = (draft) => Boolean(
   draft
   && isValidTsid(draft.regionId)
   && (draft.apartmentComplexId == null || isValidTsid(draft.apartmentComplexId))
-  && isValidPropertyAddress(draft.address)
+  && isValidPropertyAddress(draft.address),
+);
+
+export const hasPropertyIntegrationData = (draft) => Boolean(
+  hasPropertyAddressIntegrationData(draft)
   && Array.isArray(draft.fileIds)
   && draft.fileIds.length >= 1
   && draft.fileIds.length <= 30
