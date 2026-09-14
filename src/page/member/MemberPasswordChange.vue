@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
+import memberMessage from "../../constants/memberMessage.js";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 import { useMemberStore } from "../../store/member/member.js";
 
@@ -48,9 +49,10 @@ const sendCode = async () => {
     verified.value = false;
     codeSent.value = true;
     message.value = "가입한 이메일로 인증번호를 보냈습니다.";
-  } catch (error) {
-    errorMessage.value =
-      error?.response?.data?.message || "인증번호를 보내지 못했습니다.";
+  } catch {
+    errorMessage.value = memberMessage.getMemberMessage(
+      "PASSWORD_CODE_SEND_ERROR",
+    );
   } finally {
     sending.value = false;
   }
@@ -67,10 +69,11 @@ const verifyCode = async () => {
     );
     verified.value = true;
     message.value = "이메일 인증이 완료되었습니다.";
-  } catch (error) {
+  } catch {
     verified.value = false;
-    errorMessage.value =
-      error?.response?.data?.message || "인증번호가 올바르지 않습니다.";
+    errorMessage.value = memberMessage.getMemberMessage(
+      "PASSWORD_CODE_VERIFY_ERROR",
+    );
   } finally {
     checking.value = false;
   }
@@ -89,9 +92,10 @@ const changePassword = async () => {
     });
     authStore.clearAuthStore();
     await router.replace({ path: "/sign-in", query: { passwordChanged: "true" } });
-  } catch (error) {
-    errorMessage.value =
-      error?.response?.data?.message || "비밀번호를 변경하지 못했습니다.";
+  } catch {
+    errorMessage.value = memberMessage.getMemberMessage(
+      "PASSWORD_CHANGE_ERROR",
+    );
   } finally {
     changing.value = false;
   }

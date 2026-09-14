@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
+import memberMessage from "../../constants/memberMessage.js";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 
 const router = useRouter();
@@ -15,16 +16,12 @@ const submitting = ref(false);
 const errorMessage = ref("");
 const canSubmit = computed(() => form.password.length > 0 && form.agreed);
 
-const readError = (error, fallback) =>
-  error?.response?.data?.message || error?.response?.data?.data || fallback;
-
 const loadContext = async () => {
   try {
     context.value = await authStore.getSocialSignupContext();
-  } catch (error) {
-    errorMessage.value = readError(
-      error,
-      "카카오 인증 정보가 만료되었습니다. 다시 로그인해 주세요.",
+  } catch {
+    errorMessage.value = memberMessage.getMemberMessage(
+      "SOCIAL_CONTEXT_ERROR",
     );
   } finally {
     loading.value = false;
@@ -40,11 +37,8 @@ const submitLink = async () => {
     const success = await authStore.reissue();
     if (!success) throw new Error("토큰 발급 실패");
     await router.replace("/main");
-  } catch (error) {
-    errorMessage.value = readError(
-      error,
-      "기존 계정의 비밀번호를 확인해 주세요.",
-    );
+  } catch {
+    errorMessage.value = memberMessage.getMemberMessage("SOCIAL_LINK_ERROR");
   } finally {
     submitting.value = false;
   }

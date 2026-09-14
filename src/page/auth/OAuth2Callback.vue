@@ -3,6 +3,7 @@ import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
+import memberMessage from "../../constants/memberMessage.js";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 
 const route = useRoute();
@@ -12,9 +13,7 @@ const errorMessage = ref("");
 
 const completeOAuth = async () => {
   if (route.query.code) {
-    errorMessage.value = String(
-      route.query.message || "카카오 로그인에 실패했습니다.",
-    );
+    errorMessage.value = memberMessage.getMemberMessage("SOCIAL_LOGIN_ERROR");
     return;
   }
 
@@ -35,8 +34,7 @@ const completeOAuth = async () => {
     }
     throw new Error("알 수 없는 카카오 로그인 응답");
   } catch {
-    errorMessage.value =
-      "로그인 상태를 확인하지 못했습니다. 다시 시도해 주세요.";
+    errorMessage.value = memberMessage.getMemberMessage("LOGIN_STATUS_ERROR");
   }
 };
 
