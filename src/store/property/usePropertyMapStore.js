@@ -16,6 +16,7 @@ export const usePropertyMapStore = defineStore("propertyMapStore", () => {
   const isLoading = ref(false);
   const errorMessage = ref("");
   const selectedPropertyId = ref(null);
+  const selectedPropertySnapshot = ref(null);
   const appliedFilters = ref(createPropertyMapFilters());
 
   let requestSequence = 0;
@@ -37,11 +38,21 @@ export const usePropertyMapStore = defineStore("propertyMapStore", () => {
       return null;
     }
 
+    const currentMapProperty = propertyItems.value.find(
+      (item) =>
+        String(item.propertyId) === String(selectedPropertyId.value),
+    );
+
+    if (currentMapProperty) {
+      return currentMapProperty;
+    }
+
     return (
-      propertyItems.value.find(
-        (item) =>
-          String(item.propertyId) === String(selectedPropertyId.value),
-      ) ?? null
+      selectedPropertySnapshot.value &&
+      String(selectedPropertySnapshot.value.propertyId) ===
+        String(selectedPropertyId.value)
+        ? selectedPropertySnapshot.value
+        : null
     );
   });
 
@@ -60,7 +71,10 @@ export const usePropertyMapStore = defineStore("propertyMapStore", () => {
     isLoading.value = false;
   };
 
-  const getMapProperties = async (viewport) => {
+  const getMapProperties = async (
+    viewport,
+    { preserveSelectedProperty = false } = {},
+  ) => {
     cancelActiveRequest();
 
     const currentSequence = ++requestSequence;
@@ -94,17 +108,23 @@ export const usePropertyMapStore = defineStore("propertyMapStore", () => {
       totalCount.value = Number(data.totalCount ?? 0);
       truncated.value = data.truncated === true;
 
-      const selectedStillExists =
-        !truncated.value &&
-        responseType.value !== "REGION_AGGREGATE" &&
-        items.value.some(
-          (item) =>
-            String(item.propertyId) ===
-            String(selectedPropertyId.value),
-        );
+      if (
+        selectedPropertyId.value !== null &&
+        !preserveSelectedProperty
+      ) {
+        const selectedStillExists =
+          !truncated.value &&
+          responseType.value !== "REGION_AGGREGATE" &&
+          items.value.some(
+            (item) =>
+              String(item.propertyId) ===
+              String(selectedPropertyId.value),
+          );
 
-      if (!selectedStillExists) {
-        selectedPropertyId.value = null;
+        if (!selectedStillExists) {
+          selectedPropertyId.value = null;
+          selectedPropertySnapshot.value = null;
+        }
       }
 
       return data;
@@ -120,7 +140,6 @@ export const usePropertyMapStore = defineStore("propertyMapStore", () => {
       items.value = [];
       totalCount.value = 0;
       truncated.value = false;
-      selectedPropertyId.value = null;
       errorMessage.value =
         error?.response?.data?.message ??
         "지도 매물 정보를 불러오지 못했습니다.";
@@ -134,14 +153,34 @@ export const usePropertyMapStore = defineStore("propertyMapStore", () => {
     }
   };
 
-  const selectProperty = (propertyId) => {
-    selectedPropertyId.value =
-      propertyId === null ? null : String(propertyId);
+  const selectProperty = (property) => {
+    if (property === null) {
+      selectedPropertyId.value = null;
+      selectedPropertySnapshot.value = null;
+      return;
+    }
+
+    const propertyId =
+      typeof property === "object"
+        ? property.propertyId
+        : property;
+
+    selectedPropertyId.value = String(propertyId);
+
+    if (typeof property === "object") {
+      selectedPropertySnapshot.value = property;
+      return;
+    }
+
+    selectedPropertySnapshot.value =
+      propertyItems.value.find(
+        (item) => String(item.propertyId) === String(propertyId),
+      ) ?? null;
   };
 
   const setAppliedFilters = (filters) => {
     appliedFilters.value = normalizePropertyMapFilters(filters);
-    selectedPropertyId.value = null;
+    selectProperty(null);
 
     return appliedFilters.value;
   };
@@ -162,7 +201,7 @@ export const usePropertyMapStore = defineStore("propertyMapStore", () => {
     totalCount.value = 0;
     truncated.value = false;
     errorMessage.value = "";
-    selectedPropertyId.value = null;
+    selectProperty(null);
   };
 
   return {
