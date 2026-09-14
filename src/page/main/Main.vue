@@ -4,12 +4,7 @@ const categoryItems = [
   { label: "오피스텔", icon: "/icon/main/officetel.svg", to: "/properties/search" },
   { label: "원룸", icon: "/icon/main/one-room.svg", to: "/properties/search" },
   { label: "투룸+", icon: "/icon/main/two-room.svg", to: "/properties/search" },
-  { label: "상가", icon: "/icon/main/store.svg", to: "/properties/search" },
   { label: "관심", icon: "/icon/main/favorite-menu.svg", to: "/favorites" },
-  { label: "실거래가", icon: "/icon/main/real-price.svg" },
-  { label: "출퇴근", icon: "/icon/main/commute.svg" },
-  { label: "등기부분석", icon: "/icon/main/registry.svg" },
-  { label: "청약", icon: "/icon/main/subscription.svg" },
 ];
 
 const regions = ["전국", "서울", "부산", "대구", "인천", "대전"];
