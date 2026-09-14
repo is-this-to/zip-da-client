@@ -227,14 +227,20 @@ export const normalizePropertyMapFilters = (source = {}) => {
   return filters;
 };
 
-export const buildPropertyMapQueryParams = (viewport, sourceFilters) => {
-  const filters = normalizePropertyMapFilters(sourceFilters);
-  const params = new URLSearchParams();
+const PROPERTY_BOUNDS_FIELDS = [
+  "minLat",
+  "minLng",
+  "maxLat",
+  "maxLng",
+];
 
-  Object.entries(viewport).forEach(([key, value]) => {
-    params.append(key, String(value));
+const appendPropertyBounds = (params, viewport) => {
+  PROPERTY_BOUNDS_FIELDS.forEach((key) => {
+    params.append(key, String(viewport[key]));
   });
+};
 
+const appendPropertyFilterParams = (params, filters) => {
   ["propertyTypes", "transactionTypes", "publisherTypes"].forEach(
     (key) => {
       filters[key].forEach((value) => params.append(key, value));
@@ -260,6 +266,35 @@ export const buildPropertyMapQueryParams = (viewport, sourceFilters) => {
   });
 
   params.append("sort", filters.sort);
+};
+
+export const buildPropertyMapQueryParams = (viewport, sourceFilters) => {
+  const filters = normalizePropertyMapFilters(sourceFilters);
+  const params = new URLSearchParams();
+
+  appendPropertyBounds(params, viewport);
+  params.append("zoomLevel", String(viewport.zoomLevel));
+  appendPropertyFilterParams(params, filters);
+
+  return params;
+};
+
+export const buildPropertyListQueryParams = (
+  viewport,
+  sourceFilters,
+  { cursor = null, size = 20 } = {},
+) => {
+  const filters = normalizePropertyMapFilters(sourceFilters);
+  const params = new URLSearchParams();
+
+  appendPropertyBounds(params, viewport);
+  appendPropertyFilterParams(params, filters);
+  params.append("size", String(size));
+
+  if (cursor !== null && cursor !== undefined && cursor !== "") {
+    params.append("cursor", cursor);
+  }
+
   return params;
 };
 

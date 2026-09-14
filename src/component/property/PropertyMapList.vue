@@ -1,5 +1,11 @@
 <script setup>
-import { nextTick, watch } from "vue";
+import {
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
 
 import { formatPropertyPrice } from
   "../../util/property/formatPropertyPrice.js";
@@ -17,10 +23,38 @@ const props = defineProps({
     type: String,
     default: "LATEST",
   },
+  hasNext: {
+    type: Boolean,
+    default: false,
+  },
+  isInitialLoading: {
+    type: Boolean,
+    default: false,
+  },
+  isLoadingMore: {
+    type: Boolean,
+    default: false,
+  },
+  errorMessage: {
+    type: String,
+    default: "",
+  },
 });
 
-const emit = defineEmits(["select-property", "change-sort"]);
+const emit = defineEmits([
+  "select-property",
+  "change-sort",
+  "load-more",
+  "retry",
+]);
+
+const listContainer = ref(null);
+const loadMoreSentinel = ref(null);
 const cardElements = new Map();
+
+let intersectionObserver = null;
+let viewportMediaQuery = null;
+let isComponentMounted = false;
 
 const propertyTypeLabel = (propertyType) => {
   const labels = {
@@ -51,6 +85,66 @@ const isSelected = (propertyId) => {
   );
 };
 
+const disconnectObserver = () => {
+  intersectionObserver?.disconnect();
+  intersectionObserver = null;
+};
+
+const connectObserver = async () => {
+  await nextTick();
+  disconnectObserver();
+
+  if (
+    !isComponentMounted ||
+    !props.hasNext ||
+    props.isInitialLoading ||
+    props.isLoadingMore ||
+    props.errorMessage ||
+    !loadMoreSentinel.value
+  ) {
+    return;
+  }
+
+  const isDesktop = viewportMediaQuery?.matches === true;
+
+  intersectionObserver = new IntersectionObserver(
+    ([entry]) => {
+      if (
+        entry?.isIntersecting &&
+        props.hasNext &&
+        !props.isInitialLoading &&
+        !props.isLoadingMore &&
+        !props.errorMessage
+      ) {
+        emit("load-more");
+      }
+    },
+    {
+      root: isDesktop ? listContainer.value : null,
+      rootMargin: "160px 0px",
+      threshold: 0.01,
+    },
+  );
+
+  intersectionObserver.observe(loadMoreSentinel.value);
+};
+
+const handleViewportModeChange = () => {
+  connectObserver();
+};
+
+watch(
+  () => [
+    props.hasNext,
+    props.isInitialLoading,
+    props.isLoadingMore,
+    props.errorMessage,
+    props.items.length,
+  ],
+  connectObserver,
+  { flush: "post" },
+);
+
 watch(
   () => props.selectedPropertyId,
   async (propertyId) => {
@@ -67,18 +161,39 @@ watch(
     });
   },
 );
+
+onMounted(() => {
+  isComponentMounted = true;
+  viewportMediaQuery = window.matchMedia("(min-width: 768px)");
+  viewportMediaQuery.addEventListener(
+    "change",
+    handleViewportModeChange,
+  );
+
+  connectObserver();
+});
+
+onBeforeUnmount(() => {
+  isComponentMounted = false;
+  disconnectObserver();
+  viewportMediaQuery?.removeEventListener(
+    "change",
+    handleViewportModeChange,
+  );
+  viewportMediaQuery = null;
+  cardElements.clear();
+});
 </script>
 
 <template>
   <section
-    v-if="items.length > 0"
     class="property-map-list"
     aria-label="현재 지도 영역의 매물"
   >
     <div class="property-map-list__header">
       <div class="property-map-list__summary">
         <strong>현재 지도 매물</strong>
-        <span>{{ items.length }}개 표시</span>
+        <span>{{ items.length }}개 불러옴</span>
       </div>
 
       <select
@@ -94,34 +209,109 @@ watch(
       </select>
     </div>
 
-    <div class="property-map-list__items">
-      <button
-        v-for="item in items"
-        :key="String(item.propertyId)"
-        :ref="(element) => setCardElement(element, item.propertyId)"
-        type="button"
-        class="property-map-card"
-        :class="{
-          'property-map-card--selected': isSelected(item.propertyId),
-        }"
-        @click="emit('select-property', item)"
+    <div
+      ref="listContainer"
+      class="property-map-list__items"
+      aria-live="polite"
+    >
+      <div
+        v-if="isInitialLoading"
+        class="property-map-list__state"
+        role="status"
       >
-        <span class="property-map-card__type">
-          {{ propertyTypeLabel(item.propertyType) }}
-        </span>
+        매물 목록을 불러오는 중입니다.
+      </div>
 
-        <strong class="property-map-card__price">
-          {{ formatPropertyPrice(item) }}
-        </strong>
+      <div
+        v-else-if="errorMessage && items.length === 0"
+        class="property-map-list__state"
+        role="alert"
+      >
+        <p>{{ errorMessage }}</p>
 
-        <span class="property-map-card__title">
-          {{ item.title }}
-        </span>
+        <button
+          type="button"
+          class="property-map-list__retry"
+          @click="emit('retry')"
+        >
+          다시 시도
+        </button>
+      </div>
 
-        <span class="property-map-card__address">
-          {{ item.publicAddress }}
-        </span>
-      </button>
+      <div
+        v-else-if="items.length === 0"
+        class="property-map-list__state"
+      >
+        현재 조건에 맞는 매물이 없습니다.
+      </div>
+
+      <template v-else>
+        <button
+          v-for="item in items"
+          :key="String(item.propertyId)"
+          :ref="(element) => setCardElement(element, item.propertyId)"
+          type="button"
+          class="property-map-card"
+          :class="{
+            'property-map-card--selected': isSelected(item.propertyId),
+          }"
+          @click="emit('select-property', item)"
+        >
+          <span class="property-map-card__type">
+            {{ propertyTypeLabel(item.propertyType) }}
+          </span>
+
+          <strong class="property-map-card__price">
+            {{ formatPropertyPrice(item) }}
+          </strong>
+
+          <span class="property-map-card__title">
+            {{ item.title }}
+          </span>
+
+          <span class="property-map-card__address">
+            {{ item.publicAddress }}
+          </span>
+        </button>
+
+        <div
+          v-if="isLoadingMore"
+          class="property-map-list__state property-map-list__state--compact"
+          role="status"
+        >
+          다음 매물을 불러오는 중입니다.
+        </div>
+
+        <div
+          v-else-if="errorMessage"
+          class="property-map-list__state property-map-list__state--compact"
+          role="alert"
+        >
+          <p>{{ errorMessage }}</p>
+
+          <button
+            type="button"
+            class="property-map-list__retry"
+            @click="emit('retry')"
+          >
+            다시 시도
+          </button>
+        </div>
+
+        <div
+          v-if="hasNext && !errorMessage"
+          ref="loadMoreSentinel"
+          class="property-map-list__sentinel"
+          aria-hidden="true"
+        />
+
+        <p
+          v-else-if="!hasNext && !errorMessage"
+          class="property-map-list__end"
+        >
+          모든 매물을 확인했습니다.
+        </p>
+      </template>
     </div>
   </section>
 </template>
@@ -170,7 +360,14 @@ watch(
 
 .property-map-list__items {
   display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
   gap: 10px;
+  padding-bottom: calc(
+    var(--zipda-bottom-nav-height) +
+    env(safe-area-inset-bottom) +
+    16px
+  );
 }
 
 .property-map-card {
@@ -216,6 +413,49 @@ watch(
 .property-map-card__address {
   color: var(--zipda-color-text-muted);
   font-size: 11px;
+}
+
+.property-map-list__state {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  min-height: 140px;
+  padding: 20px;
+  color: var(--zipda-color-text-muted);
+  text-align: center;
+}
+
+.property-map-list__state--compact {
+  min-height: auto;
+  padding: 14px;
+}
+
+.property-map-list__state p,
+.property-map-list__end {
+  margin: 0;
+}
+
+.property-map-list__retry {
+  min-height: 36px;
+  padding: 0 16px;
+  color: var(--zipda-color-white);
+  background: var(--zipda-color-primary);
+  border: 0;
+  border-radius: 9999px;
+  cursor: pointer;
+}
+
+.property-map-list__sentinel {
+  width: 100%;
+  height: 2px;
+}
+
+.property-map-list__end {
+  padding: 16px;
+  color: var(--zipda-color-text-muted);
+  font-size: 12px;
+  text-align: center;
 }
 
 @media (min-width: 768px) {
