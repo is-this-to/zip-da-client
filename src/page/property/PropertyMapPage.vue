@@ -9,6 +9,7 @@ import {
 
 import { useRegionStore } from "../../store/region/useRegionStore.js";
 import { usePropertyMapStore } from "../../store/property/usePropertyMapStore.js";
+import { usePropertyListStore } from "../../store/property/usePropertyListStore.js";
 import { useMyErrorStore } from "../../store/error/useMyErrorStore.js";
 
 import IconButton from "../../component/button/IconButton.vue";
@@ -23,6 +24,7 @@ import {
 
 const regionStore = useRegionStore();
 const propertyMapStore = usePropertyMapStore();
+const propertyListStore = usePropertyListStore();
 const myErrorStore = useMyErrorStore();
 
 const kakaoMapRef = shallowRef(null);
@@ -178,6 +180,16 @@ const handleSearchError = (error) =>{
  * 지도 매물 API 오류는 지역 검색·상세 오류와 분리한다.
  */
 const handleMapPropertyError = (error) => {
+  console.error(error);
+
+  myErrorStore.redirectErrorPage(error);
+};
+
+/**
+ * 목록 API 오류는 지도 마커 오류와 별도로 처리한다.
+ * 비시스템 오류는 목록 Store의 오류 메시지와 재시도 UI에 표시한다.
+ */
+const handlePropertyListError = (error) => {
   console.error(error);
 
   myErrorStore.redirectErrorPage(error);
@@ -445,14 +457,21 @@ const handleMapBoundsChange = (viewport) => {
    * debounce 대기 중에도 이전 요청이 현재 화면을 덮지 못하게 한다.
    */
   propertyMapStore.cancelActiveRequest();
+  propertyListStore.cancelActiveRequest();
 
   mapPropertyRequestTimer = setTimeout(
     async () => {
-      try {
-        await propertyMapStore.getMapProperties(viewport);
-      } catch (error) {
-        handleMapPropertyError(error);
-      }
+      const filters = propertyMapStore.appliedFilters;
+
+      const mapRequest = propertyMapStore
+        .getMapProperties(viewport)
+        .catch(handleMapPropertyError);
+
+      const listRequest = propertyListStore
+        .fetchInitialProperties(viewport, filters)
+        .catch(handlePropertyListError);
+
+      await Promise.all([mapRequest, listRequest]);
     },
     400,
   );
@@ -518,6 +537,22 @@ const handleMapPropertySelect = (property) => {
 const handlePropertyCardSelect = (property) => {
   propertyMapStore.selectProperty(property.propertyId);
   kakaoMapRef.value?.focusProperty(property);
+};
+
+const loadMoreProperties = async () => {
+  try {
+    await propertyListStore.fetchNextProperties();
+  } catch (error) {
+    handlePropertyListError(error);
+  }
+};
+
+const retryPropertyList = async () => {
+  try {
+    await propertyListStore.retry();
+  } catch (error) {
+    handlePropertyListError(error);
+  }
 };
 
 /**
@@ -705,6 +740,7 @@ onBeforeUnmount(()=>{
    */
   clearTimeout(mapPropertyRequestTimer);
   propertyMapStore.clearMapState();
+  propertyListStore.clearListState();
 
   /**
    * 화면 크기 변경 이벤트 제거
@@ -903,15 +939,17 @@ onBeforeUnmount(()=>{
       </div>
 
       <PropertyMapList
-        v-if="
-          !propertyMapStore.truncated &&
-          propertyMapStore.responseType !== 'REGION_AGGREGATE'
-        "
-        :items="propertyMapStore.propertyItems"
+        :items="propertyListStore.items"
         :selected-property-id="propertyMapStore.selectedPropertyId"
         :sort="propertyMapStore.appliedFilters.sort"
+        :has-next="propertyListStore.hasNext"
+        :is-initial-loading="propertyListStore.isInitialLoading"
+        :is-loading-more="propertyListStore.isLoadingMore"
+        :error-message="propertyListStore.errorMessage"
         @select-property="handlePropertyCardSelect"
         @change-sort="handleSortChange"
+        @load-more="loadMoreProperties"
+        @retry="retryPropertyList"
       />
     </aside>
   </section>
