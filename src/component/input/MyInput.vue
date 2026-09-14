@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, useId } from 'vue'
+import { computed, useId } from 'vue'
 
 const props = defineProps({
   id: { type: String, default: '' },
@@ -21,10 +21,6 @@ const model = defineModel({ type: [String, Number], default: '' })
 const generatedId = useId()
 const inputId = computed(() => props.id || `zipda-input-${generatedId}`)
 const descriptionId = computed(() => `${inputId.value}-description`)
-const isPasswordVisible = ref(false)
-const inputType = computed(() =>
-  props.type === 'password' && isPasswordVisible.value ? 'text' : props.type,
-)
 </script>
 
 <template>
@@ -33,17 +29,14 @@ const inputType = computed(() =>
       {{ label }}<span v-if="required" class="my-input__required" aria-hidden="true"> *</span>
     </label>
 
-    <div
-      class="my-input__control"
-      :class="{ 'my-input__control--password': type === 'password' }"
-    >
+    <div class="my-input__control">
       <slot name="leading"></slot>
       <input
         :id="inputId"
         v-model="model"
         class="my-input__field"
         :name="name"
-        :type="inputType"
+        :type="type"
         :placeholder="placeholder"
         :autocomplete="autocomplete"
         :inputmode="inputmode"
@@ -54,17 +47,6 @@ const inputType = computed(() =>
         :aria-invalid="Boolean(errorMessage)"
         :aria-describedby="helperText || errorMessage ? descriptionId : undefined"
       />
-      <button
-        v-if="type === 'password'"
-        class="my-input__password-toggle"
-        type="button"
-        :aria-label="isPasswordVisible ? '비밀번호 숨기기' : '비밀번호 보기'"
-        :aria-pressed="isPasswordVisible"
-        :disabled="disabled"
-        @click="isPasswordVisible = !isPasswordVisible"
-      >
-        {{ isPasswordVisible ? '숨기기' : '보기' }}
-      </button>
       <slot name="trailing"></slot>
     </div>
 
@@ -93,7 +75,6 @@ const inputType = computed(() =>
 }
 
 .my-input__control {
-  position: relative;
   display: flex;
   align-items: center;
   min-height: 46px;
@@ -112,7 +93,6 @@ const inputType = computed(() =>
 }
 
 .my-input__field {
-  box-sizing: border-box;
   width: 100%;
   min-width: 0;
   padding: 0;
@@ -130,46 +110,6 @@ const inputType = computed(() =>
 
 .my-input__field:disabled {
   cursor: not-allowed;
-}
-
-.my-input__control--password .my-input__field {
-  padding-right: 54px;
-}
-
-.my-input__password-toggle {
-  position: absolute;
-  top: 0;
-  right: 13px;
-  bottom: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 38px;
-  padding: 0;
-  color: var(--zipda-color-text-muted);
-  background: transparent;
-  border: 0;
-  border-radius: 4px;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: normal;
-  cursor: pointer;
-}
-
-.my-input__password-toggle:hover:not(:disabled) {
-  color: var(--zipda-color-primary);
-}
-
-.my-input__password-toggle:focus-visible {
-  color: var(--zipda-color-primary);
-  outline: 2px solid var(--zipda-color-primary);
-  outline-offset: 2px;
-}
-
-.my-input__password-toggle:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
 }
 
 .my-input__control:has(.my-input__field:disabled) {

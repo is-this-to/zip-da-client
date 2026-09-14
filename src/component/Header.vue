@@ -14,14 +14,6 @@ const props = defineProps({
     type: [String, Object],
     default: '',
   },
-  brand: {
-    type: Boolean,
-    default: false,
-  },
-  titleWeight: {
-    type: [String, Number],
-    default: 600,
-  },
 })
 
 const router = useRouter()
@@ -37,10 +29,7 @@ const goBack = () => {
 </script>
 
 <template>
-  <header
-    class="app-header"
-    :class="{ 'app-header--brand': brand }"
-  >
+  <header class="app-header">
     <button
       v-if="showBack"
       type="button"
@@ -52,12 +41,7 @@ const goBack = () => {
     </button>
     <span v-else class="app-header__side" aria-hidden="true"></span>
 
-    <strong
-      class="app-header__title"
-      :style="{ fontWeight: titleWeight }"
-    >
-      {{ title }}
-    </strong>
+    <strong class="app-header__title">{{ title }}</strong>
 
     <span class="app-header__side">
       <slot name="action"></slot>
