@@ -763,9 +763,6 @@ onBeforeUnmount(() => {
   font-size: 14px;
   line-height: 1.7;
 }
-:deep(.app-header) {
-  position: static;
-}
 :deep(.my-button--large) {
   min-height: 52px;
   border-radius: var(--zipda-radius-large);

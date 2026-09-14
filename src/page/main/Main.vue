@@ -1,7 +1,17 @@
 <script setup>
+import Header from "../../component/Header.vue";
+
 const categoryItems = [
-  { label: "아파트", icon: "/icon/main/apartment.svg", to: "/properties/search" },
-  { label: "오피스텔", icon: "/icon/main/officetel.svg", to: "/properties/search" },
+  {
+    label: "아파트",
+    icon: "/icon/main/apartment.svg",
+    to: "/properties/search",
+  },
+  {
+    label: "오피스텔",
+    icon: "/icon/main/officetel.svg",
+    to: "/properties/search",
+  },
   { label: "원룸", icon: "/icon/main/one-room.svg", to: "/properties/search" },
   { label: "투룸+", icon: "/icon/main/two-room.svg", to: "/properties/search" },
   { label: "관심", icon: "/icon/main/favorite-menu.svg", to: "/favorites" },
@@ -45,9 +55,7 @@ const risingComplexes = [
 
 <template>
   <section class="main-page" aria-label="ZIPDA 메인">
-    <header class="main-header">
-      <h1 class="main-header__logo">ZIPDA</h1>
-    </header>
+    <Header title="ZIPDA" :title-weight="900" brand />
 
     <section class="category-section" aria-label="빠른 메뉴">
       <div class="category-grid">
@@ -140,11 +148,7 @@ const risingComplexes = [
 
       <button type="button" class="more-button">
         <span>더보기</span>
-        <img
-          src="/icon/main/chevron-down.svg"
-          alt=""
-          aria-hidden="true"
-        />
+        <img src="/icon/main/chevron-down.svg" alt="" aria-hidden="true" />
       </button>
     </section>
   </section>
@@ -156,25 +160,6 @@ const risingComplexes = [
   min-height: 100dvh;
   background: var(--zipda-color-white);
   color: var(--zipda-color-text);
-}
-
-/* 상단은 화면 전체 너비 */
-.main-header {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  height: 56px;
-  padding: 0 16px;
-  background: var(--zipda-color-white);
-  border-bottom: 1px solid #dde5d4;
-}
-
-.main-header__logo {
-  color: #516237;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 34px;
-  letter-spacing: -0.28px;
 }
 
 /* 실제 메인 콘텐츠는 공통 560px 기준 */
@@ -376,8 +361,7 @@ const risingComplexes = [
   flex: 0 0 64px;
   width: 64px;
   height: 64px;
-  background:
-    linear-gradient(135deg, #efeee9 0%, #dde5d4 100%);
+  background: linear-gradient(135deg, #efeee9 0%, #dde5d4 100%);
   border-radius: 8px;
 }
 
