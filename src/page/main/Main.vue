@@ -157,12 +157,13 @@ const risingComplexes = [
 
 <style scoped>
 .main-page {
+  width: 100%;
   min-height: 100dvh;
-  padding-bottom: 16px;
   background: var(--zipda-color-white);
   color: var(--zipda-color-text);
 }
 
+/* 상단은 화면 전체 너비 */
 .main-header {
   display: flex;
   align-items: center;
@@ -181,9 +182,12 @@ const risingComplexes = [
   letter-spacing: -0.28px;
 }
 
+/* 실제 메인 콘텐츠는 공통 560px 기준 */
 .category-section {
   width: 100%;
-  padding: 16px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px 20px;
   background: var(--zipda-color-white);
 }
 
@@ -243,18 +247,22 @@ const risingComplexes = [
   white-space: nowrap;
 }
 
+/* 섹션 구분선은 화면 전체 너비 */
 .main-divider {
   width: 100%;
   height: 8px;
   background: #f4f4ef;
 }
 
+/* 인기 급상승 영역도 실제 내용만 560px */
 .rising-section {
   display: flex;
   flex-direction: column;
   gap: 16px;
   width: 100%;
-  padding: 24px 0;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 24px 0 40px;
   background: var(--zipda-color-white);
 }
 
@@ -262,7 +270,7 @@ const risingComplexes = [
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 16px;
+  padding: 0 20px;
 }
 
 .rising-section__heading h2 {
@@ -281,7 +289,7 @@ const risingComplexes = [
   display: flex;
   gap: 8px;
   width: 100%;
-  padding: 0 16px;
+  padding: 0 20px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -314,7 +322,7 @@ const risingComplexes = [
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding: 8px 16px 0;
+  padding: 8px 20px 0;
   list-style: none;
 }
 
@@ -383,9 +391,9 @@ const risingComplexes = [
   align-items: center;
   justify-content: center;
   gap: 4px;
-  width: calc(100% - 32px);
+  width: calc(100% - 40px);
   height: 42px;
-  margin: 0 16px;
+  margin: 0 20px;
   padding: 0;
   color: #516237;
   font-size: 13px;
@@ -399,14 +407,5 @@ const risingComplexes = [
 .more-button img {
   width: 8px;
   height: 5px;
-}
-
-@media (min-width: 768px) {
-  .main-page {
-    max-width: 344px;
-    min-height: 100dvh;
-    margin: 0 auto;
-    box-shadow: var(--zipda-shadow-app);
-  }
 }
 </style>
