@@ -5,12 +5,20 @@ import { useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import PropertyCoreForm from "../../component/property/PropertyCoreForm.vue";
+import PropertyRegistrationStep4 from "../../component/property/PropertyRegistrationStep4.vue";
 import { PROPERTY_LABELS } from "../../constant/property/propertyStatus.js";
-import { createPropertyCreateRequest } from "../../store/property/propertyRequestPolicy.js";
+import {
+  createPropertyCreateRequest,
+  isRegistrationBackDisabled,
+} from "../../store/property/propertyRequestPolicy.js";
 import { usePropertyManagementStore } from "../../store/property/usePropertyManagementStore.js";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 import { formatPropertyPrice } from "../../util/property/formatPropertyPrice.js";
-import { hasPropertyIntegrationData, validatePropertyCore } from "../../util/validator/property/propertyValidator.js";
+import {
+  hasPropertyAddressIntegrationData,
+  hasPropertyIntegrationData,
+  validatePropertyCore,
+} from "../../util/validator/property/propertyValidator.js";
 
 const router = useRouter();
 const store = usePropertyManagementStore();
@@ -19,6 +27,8 @@ const step = ref(1);
 const errors = ref({});
 const confirmedFacts = ref(false);
 const confirmedEvidence = ref(false);
+const step4ImageUploadBusy = ref(false);
+const step4 = ref(null);
 
 const form = ref({
   publisherType: "",
@@ -53,7 +63,16 @@ const publisherChoices = computed(() => role.value === "AGENT"
       { value: "DIRECT_TENANT", title: "세입자 직거래", description: "임대차관계를 확인한 뒤 공개합니다." },
     ]);
 const integrationReady = computed(() => hasPropertyIntegrationData(store.registrationIntegration));
+const addressConnected = computed(() =>
+  hasPropertyAddressIntegrationData(store.registrationIntegration),
+);
+const backDisabled = computed(() =>
+  isRegistrationBackDisabled(step.value, step4ImageUploadBusy.value),
+);
 const isPersonalProperty = computed(() => form.value.publisherType !== "AGENT_BROKERAGE");
+const selectedOptionCount = computed(() =>
+  store.registrationIntegration?.options?.filter((option) => option.optionValue === "true").length ?? 0,
+);
 const reviewPrice = computed(() => form.value.transactionType
   ? formatPropertyPrice({
       transactionType: form.value.transactionType,
@@ -90,19 +109,48 @@ const nextFromPublisher = () => {
 
 const nextFromCore = () => {
   errors.value = validatePropertyCore(form.value);
-  if (Object.keys(errors.value).length > 0 || !integrationReady.value) return;
+  if (Object.keys(errors.value).length > 0) return;
   store.clearFeedback();
+  step.value = 4;
+};
+
+const completeStep4 = (patch) => {
+  store.setRegistrationIntegration(patch);
+  if (!hasPropertyAddressIntegrationData(store.registrationIntegration)) {
+    errors.value = {
+      ...errors.value,
+      integration: "주소·Region 검증 결과가 필요합니다. 이전 단계에서 주소 연결 상태를 확인해 주세요.",
+    };
+    return;
+  }
+  errors.value = {};
+  step4ImageUploadBusy.value = false;
   confirmedFacts.value = false;
   confirmedEvidence.value = false;
   step.value = 5;
 };
 
+const backFromStep4 = (patch) => {
+  store.setRegistrationIntegration(patch);
+  step4ImageUploadBusy.value = false;
+  goBack();
+};
+
 const goBack = () => {
+  if (backDisabled.value) return;
+  if (step.value === 4) {
+    const patch = step4.value?.currentPatch();
+    if (patch) store.setRegistrationIntegration(patch);
+  }
   store.clearFeedback();
   errors.value = {};
   if (step.value === 5) {
     confirmedFacts.value = false;
     confirmedEvidence.value = false;
+    step.value = 4;
+    return;
+  }
+  if (step.value === 4) {
     step.value = 2;
     return;
   }
@@ -157,11 +205,11 @@ onMounted(async () => {
       </div>
       <template v-else>
         <div class="step-heading">
-        <button class="step-back" type="button" aria-label="이전" @click="goBack">←</button>
+        <button class="step-back" type="button" aria-label="이전" :disabled="backDisabled" @click="goBack">←</button>
         <div class="step-heading__copy">
           <p class="step-number"><strong>{{ step }}</strong>/5</p>
           <h1 class="page-title">
-            {{ step === 1 ? "어떤 매물을 등록하나요?" : step === 2 ? "매물 정보를 입력해 주세요" : "등록 내용을 확인해 주세요" }}
+            {{ step === 1 ? "어떤 매물을 등록하나요?" : step === 2 ? "매물 정보를 입력해 주세요" : step === 4 ? "옵션과 사진을 등록해 주세요" : "등록 내용을 확인해 주세요" }}
           </h1>
         </div>
         </div>
@@ -206,19 +254,31 @@ onMounted(async () => {
         />
 
         <div class="info-box integration-box">
-          <strong>3·4단계 연결 상태</strong>
-          <p v-if="integrationReady">주소·단지 검증과 옵션·사진 입력이 연결되었습니다.</p>
-          <p v-else>주소·단지 담당의 검증 결과와 옵션·사진 담당의 완료 결과가 필요합니다.</p>
-          <p>연결 전에는 최종 확인 단계로 이동할 수 없습니다.</p>
+          <strong>주소·Region 연결 상태</strong>
+          <p v-if="addressConnected">준비된 주소·단지 검증 결과를 그대로 유지합니다.</p>
+          <p v-else>주소·단지 검증 결과가 아직 연결되지 않았습니다.</p>
+          <p>옵션과 사진은 다음 단계에서 입력합니다.</p>
         </div>
 
         <div class="form-actions form-actions--step create-actions">
           <MyButton variant="outline" @click="goBack">이전</MyButton>
-          <MyButton :disabled="!integrationReady" @click="nextFromCore">5단계 확인</MyButton>
+          <MyButton @click="nextFromCore">4단계 옵션·사진</MyButton>
         </div>
         </template>
 
-        <template v-else>
+        <PropertyRegistrationStep4
+          v-else-if="step === 4"
+          ref="step4"
+          :property-type="form.propertyType"
+          :initial-file-ids="store.registrationIntegration?.fileIds ?? []"
+          :initial-options="store.registrationIntegration?.options ?? []"
+          :error-message="errors.integration"
+          @back="backFromStep4"
+          @busy-change="step4ImageUploadBusy = $event"
+          @complete="completeStep4"
+        />
+
+        <template v-else-if="step === 5">
         <section class="review-complete" aria-label="등록 준비 완료">
           <span aria-hidden="true">✓</span>
           <strong>마지막 확인 후 매물이 등록됩니다.</strong>
@@ -230,8 +290,8 @@ onMounted(async () => {
           <dl>
             <div><dt>거래</dt><dd>{{ reviewPrice }}</dd></div>
             <div><dt>전용면적</dt><dd>{{ form.exclusiveArea }}㎡</dd></div>
-            <div><dt>사진</dt><dd>{{ store.registrationIntegration.fileIds.length }}장</dd></div>
-            <div><dt>옵션</dt><dd>{{ store.registrationIntegration.options.length }}개</dd></div>
+            <div><dt>사진</dt><dd>{{ store.registrationIntegration?.fileIds?.length ?? 0 }}장</dd></div>
+            <div><dt>선택 옵션</dt><dd>{{ selectedOptionCount }}개</dd></div>
           </dl>
           <p>정확 주소와 좌표는 등록 요청에만 사용하며 이 확인 화면에는 표시하지 않습니다.</p>
         </section>
@@ -272,6 +332,7 @@ onMounted(async () => {
 .step-heading { display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: start; gap: 6px; }
 .step-heading__copy { display: grid; gap: 12px; }
 .step-back { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; color: var(--zipda-color-text); background: transparent; border: 0; font-size: 20px; cursor: pointer; }
+.step-back:disabled { color: var(--zipda-color-text-muted); cursor: not-allowed; opacity: 0.5; }
 .step-number { justify-self: end; min-width: 42px; padding: 4px 9px; color: var(--zipda-color-text-muted); background: var(--zipda-color-subtle-background); border-radius: 999px; font-size: 12px; text-align: center; }
 .step-number strong { color: var(--zipda-color-primary-active); }
 .step-heading .page-title { grid-column: 1 / -1; font-size: 21px; }
