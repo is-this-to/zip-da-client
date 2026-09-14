@@ -1,11 +1,5 @@
 <script setup>
-import {
-  computed,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  shallowRef,
-} from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
 
 import { useRegionStore } from "../../store/region/useRegionStore.js";
 import { usePropertyMapStore } from "../../store/property/usePropertyMapStore.js";
@@ -17,10 +11,7 @@ import KakaoMap from "../../component/region/KakaoMap.vue";
 import RegionSelector from "../../component/region/RegionSelector.vue";
 import PropertyMapList from "../../component/property/PropertyMapList.vue";
 import PropertyMapFilterPanel from "../../component/property/PropertyMapFilterPanel.vue";
-import {
-  getAppliedPropertyMapFilterChips,
-} from "../../util/property/propertyMapFilter.js";
-
+import { getAppliedPropertyMapFilterChips } from "../../util/property/propertyMapFilter.js";
 
 const regionStore = useRegionStore();
 const propertyMapStore = usePropertyMapStore();
@@ -57,7 +48,7 @@ const appliedRegion = ref(null);
 
 /**
  * 현재 지도에 경계가 표시된 지역
- * 
+ *
  * 데스크탑에서는 사용자가 선택 중인
  * 미리보기 지역이 될 수도 있다.
  */
@@ -97,7 +88,7 @@ let mapPropertyRequestTimer = null;
 
 /**
  * 현재 실행 중인 지역 상세 요청 키
- * 
+ *
  * 같은 Region과 같은 지도 단계의 요청이
  * 동시에 중복 실행되지 않도록 사용한다.
  */
@@ -105,14 +96,12 @@ let activeDetailRequestKey = "";
 
 /**
  * 지도 상단 검색 버튼에 표시할 지역명
- * 
+ *
  * 사용자가 확인 버튼을 눌러 확정한 지역이 있으면
  * 해당 지역명을 표시한다.
  */
-const selectedRegionName = computed(()=>{
-  return (
-    appliedRegion.value?.regionName ?? "지역·단지·키워드 검색"
-  );
+const selectedRegionName = computed(() => {
+  return appliedRegion.value?.regionName ?? "지역·단지·키워드 검색";
 });
 
 const propertyTypeChips = [
@@ -124,9 +113,7 @@ const propertyTypeChips = [
 ];
 
 const appliedFilterChips = computed(() =>
-  getAppliedPropertyMapFilterChips(
-    propertyMapStore.appliedFilters,
-  ),
+  getAppliedPropertyMapFilterChips(propertyMapStore.appliedFilters),
 );
 
 const isPropertyTypeChipActive = (propertyType) => {
@@ -139,42 +126,43 @@ const isPropertyTypeChipActive = (propertyType) => {
   return selected.length === 1 && selected[0] === propertyType;
 };
 
-
 /**
  * 지역 상세·지도 공통 오류 처리
  */
-const handleError = (error)=>{
+const handleError = (error) => {
   console.error(error);
 
   /**
    * DB 오류 또는 시스템 오류라면
    * 공통 오류 페이지로 이동한다.
    */
-  if(myErrorStore.redirectErrorPage(error)){
+  if (myErrorStore.redirectErrorPage(error)) {
     return;
   }
 
   /**
    * 그 외 오류는 지도 화면 안에 표시한다.
    */
-  inlineErrorMessage.value = error?.response?.data?.message ?? "지역 정보를 불러오지 못했습니다.";
+  inlineErrorMessage.value =
+    error?.response?.data?.message ?? "지역 정보를 불러오지 못했습니다.";
 };
 
 /**
  * 지역명 검색 오류 처리
- * 
- * 지역 상세 오류와 지역 검색 오류를 
+ *
+ * 지역 상세 오류와 지역 검색 오류를
  * 서로 다른 위치에 표시하기 위해 분리한다.
  */
-const handleSearchError = (error) =>{
+const handleSearchError = (error) => {
   console.error(error);
 
-  if(myErrorStore.redirectErrorPage(error)){
+  if (myErrorStore.redirectErrorPage(error)) {
     return;
   }
 
-  searchErrorMessage.value = error?.response?.data?.message ?? "지역 검색 결과를 불러오지 못했습니다.";
-}
+  searchErrorMessage.value =
+    error?.response?.data?.message ?? "지역 검색 결과를 불러오지 못했습니다.";
+};
 
 /**
  * 지도 매물 API 오류는 지역 검색·상세 오류와 분리한다.
@@ -198,7 +186,7 @@ const handlePropertyListError = (error) => {
 
 /**
  * 지역 상세·경계 요청
- * 
+ *
  * regionId와 지도 확대 단계를 전달하여
  * 중심점, 경계 geometry, bounds를 조회한다.
  */
@@ -207,41 +195,29 @@ const requestRegionDetail = async (
   level = mapLevel.value,
   { fitMap = false, maximumLevel = null } = {},
 ) => {
-  const requestKey =
-    `${regionId}:${level}`;
+  const requestKey = `${regionId}:${level}`;
 
   /**
    * 실행 중인 요청과 완전히 동일한 요청이면
    * 중복 실행하지 않는다.
    */
-  if (
-    activeDetailRequestKey ===
-    requestKey
-  ) {
+  if (activeDetailRequestKey === requestKey) {
     return null;
   }
 
-  activeDetailRequestKey =
-    requestKey;
+  activeDetailRequestKey = requestKey;
 
   try {
     inlineErrorMessage.value = "";
 
-    const detail =
-      await regionStore.getRegionDetail(
-        regionId,
-        level,
-      );
+    const detail = await regionStore.getRegionDetail(regionId, level);
 
     /**
      * fitMap이 true이면 Region의 bounds에 맞춰
      * 지도의 중심과 확대 단계를 조정한다.
      */
     if (detail && fitMap) {
-      kakaoMapRef.value?.fitToRegion(
-        detail,
-        { maximumLevel },
-      );
+      kakaoMapRef.value?.fitToRegion(detail, { maximumLevel });
     }
 
     return detail;
@@ -253,10 +229,7 @@ const requestRegionDetail = async (
      * 현재 실행한 요청이 여전히 최신 요청일 때만
      * 요청 키를 초기화한다.
      */
-    if (
-      activeDetailRequestKey ===
-      requestKey
-    ) {
+    if (activeDetailRequestKey === requestKey) {
       activeDetailRequestKey = "";
     }
   }
@@ -264,34 +237,30 @@ const requestRegionDetail = async (
 
 /**
  * 데스크톱 지역 경계 미리보기
- * 
+ *
  * 데스크탑에서는 지역을 선택할 때마다
  * 확인 버튼을 누르기 전에도 지도에 경계를 표시한다.
- * 
+ *
  * 모바일에서는 지역 선택창이 화면 전체를 가리므로
  * 확인 버튼을 누르기 전에는 경계를 요청하지 않는다.
  */
-const previewRegionOnDesktop = async (region) =>{
-  if(!isDesktop.value){
+const previewRegionOnDesktop = async (region) => {
+  if (!isDesktop.value) {
     return;
   }
 
   displayedRegion.value = region;
 
-  await requestRegionDetail(
-    region.regionId,
-    mapLevel.value,
-    {
-      fitMap: true
-    }
-  );
+  await requestRegionDetail(region.regionId, mapLevel.value, {
+    fitMap: true,
+  });
 };
 
 /**
  * 시·도 선택
  */
-const handleSidoSelect = async (region)=>{
-  try{
+const handleSidoSelect = async (region) => {
+  try {
     await Promise.all([
       /**
        * 선택한 시·도의 하위 시·군·구를 조회한다.
@@ -302,9 +271,9 @@ const handleSidoSelect = async (region)=>{
        * 데스크탑이면 선택한 시·도 경계를
        * 지도에 미리 표시한다.
        */
-      previewRegionOnDesktop(region)
+      previewRegionOnDesktop(region),
     ]);
-  }catch(error){
+  } catch (error) {
     handleError(error);
   }
 };
@@ -312,8 +281,8 @@ const handleSidoSelect = async (region)=>{
 /**
  * 시·군·구 선택
  */
-const handleSigunguSelect = async (region) =>{
-  try{
+const handleSigunguSelect = async (region) => {
+  try {
     await Promise.all([
       /**
        * 선택한 시·군·구의 하위 읍·면·동을 조회한다.
@@ -321,12 +290,12 @@ const handleSigunguSelect = async (region) =>{
       regionStore.selectSigungu(region),
 
       /**
-       * 데스크탑이면 선택한 시·군·구 경계를 
+       * 데스크탑이면 선택한 시·군·구 경계를
        * 지도에 미리 표시한다.
        */
-      previewRegionOnDesktop(region)
+      previewRegionOnDesktop(region),
     ]);
-  }catch(error){
+  } catch (error) {
     handleError(error);
   }
 };
@@ -334,8 +303,8 @@ const handleSigunguSelect = async (region) =>{
 /**
  * 읍·면·동 선택
  */
-const handleEmdSelect = async (region) =>{
-  try{
+const handleEmdSelect = async (region) => {
+  try {
     /**
      * 읍·면·동은 공개 선택의 마지막 단계이므로
      * 하위 Region API를 호출하지 않는다.
@@ -347,21 +316,21 @@ const handleEmdSelect = async (region) =>{
      * 지도에 미리 표시한다.
      */
     await previewRegionOnDesktop(region);
-  }catch(error){
+  } catch (error) {
     handleError(error);
   }
 };
 
 /**
  * 선택한 지역을 검색 조건으로 확정
- * 
+ *
  * 계층으로 선택한 지역과 검색으로 선택한 지역 모두
  * regionStore.selectedRegion을 통해 가져온다.
  */
 const applySelectedRegion = async () => {
   const region = regionStore.selectedRegion;
 
-  if (!region){
+  if (!region) {
     return;
   }
 
@@ -385,18 +354,14 @@ const applySelectedRegion = async () => {
    * 선택한 Region의 상세·경계를 조회하고
    * bounds에 맞춰 지도를 이동한다.
    */
-  await requestRegionDetail(
-    region.regionId,
-    mapLevel.value,
-    {
-      fitMap: true,
-      maximumLevel: Number(region.regionLevel) === 3 ? 7 : null,
-    },
-  );
+  await requestRegionDetail(region.regionId, mapLevel.value, {
+    fitMap: true,
+    maximumLevel: Number(region.regionLevel) === 3 ? 7 : null,
+  });
 };
 
 /**
- * 지역 선택창 닫기 
+ * 지역 선택창 닫기
  */
 const closeRegionSelector = () => {
   isRegionSelectorOpen.value = false;
@@ -410,39 +375,36 @@ const toggleRegionSelector = () => {
 /**
  * 카카오 지도 생성 완료
  */
-const handleMapReady = (level) =>{
+const handleMapReady = (level) => {
   mapLevel.value = level;
 };
 
 /**
  * 카카오 지도 확대 단계 변경
- * 
+ *
  * 지도 확대 단계가 바뀌면 300ms 후
  * 현재 표시 중인 Region의 단순화 경계를 다시 요청한다.
  */
-const handleLevelChange = (level) =>{
+const handleLevelChange = (level) => {
   mapLevel.value = level;
 
   clearTimeout(levelChangeTimer);
 
-  levelChangeTimer = setTimeout(
-    async ()=>{
-      const region = displayedRegion.value;
+  levelChangeTimer = setTimeout(async () => {
+    const region = displayedRegion.value;
 
-      if(!region){
-        return;
-      }
+    if (!region) {
+      return;
+    }
 
-      /**
-       * 확대 단계 변경으로 다시 조회할 때는
-       * 지도를 Region bounds로 되돌리지 않는다.
-       * 
-       * 경계 geometry만 새 단계에 맞춰 교체한다.
-       */
-      await requestRegionDetail(region.regionId, level,{fitMap: false});
-    },
-    300
-  );
+    /**
+     * 확대 단계 변경으로 다시 조회할 때는
+     * 지도를 Region bounds로 되돌리지 않는다.
+     *
+     * 경계 geometry만 새 단계에 맞춰 교체한다.
+     */
+    await requestRegionDetail(region.regionId, level, { fitMap: false });
+  }, 300);
 };
 
 /**
@@ -520,14 +482,10 @@ const handleRegionAggregateSelect = async (region) => {
   appliedRegion.value = region;
   displayedRegion.value = region;
 
-  await requestRegionDetail(
-    region.regionId,
-    mapLevel.value,
-    {
-      fitMap: true,
-      maximumLevel: Number(region.regionLevel) === 3 ? 7 : null,
-    },
-  );
+  await requestRegionDetail(region.regionId, mapLevel.value, {
+    fitMap: true,
+    maximumLevel: Number(region.regionLevel) === 3 ? 7 : null,
+  });
 };
 
 const handleMapPropertySelect = (property) => {
@@ -558,7 +516,7 @@ const retryPropertyList = async () => {
 /**
  * 현재 사용자 위치로 지도 이동
  */
-const moveToCurrentLocation = () =>{
+const moveToCurrentLocation = () => {
   kakaoMapRef.value?.moveToCurrentLocation();
 };
 
@@ -572,23 +530,19 @@ const refreshDisplayedRegion = async () => {
     return;
   }
 
-  await requestRegionDetail(
-    region.regionId,
-    mapLevel.value,
-    { fitMap: false },
-  );
+  await requestRegionDetail(region.regionId, mapLevel.value, { fitMap: false });
 };
 
 /**
  * 지도 페이지 초기화
  */
-const initializePage = async()=>{
-  try{
+const initializePage = async () => {
+  try {
     /**
      * 최초 진입 시 최상위 시·도 목록을 조회한다.
      */
     await regionStore.getRootRegions();
-  }catch(error){
+  } catch (error) {
     handleError(error);
   }
 };
@@ -602,121 +556,110 @@ const updateViewportMode = (event) => {
 
 /**
  * 지역 검색어 변경
- * 
- * 사용자가 마지막으로 입력한 후 
+ *
+ * 사용자가 마지막으로 입력한 후
  * 350ms 동안 추가 입력이 없을 때 검색한다.
  */
 
- /**
-  * 지역 검색어 변경
-  * 
-  * 사용자가 마지막으로 입력한 뒤
-  * 350ms 동안 추가 입력이 없을 때 검색한다.
-  */
+/**
+ * 지역 검색어 변경
+ *
+ * 사용자가 마지막으로 입력한 뒤
+ * 350ms 동안 추가 입력이 없을 때 검색한다.
+ */
 const handleSearchKeywordUpdate = (keyword) => {
+  /**
+   * 입력창에 표시할 검색어를 저장한다.
+   */
+  searchKeyword.value = keyword;
 
-/**
- * 입력창에 표시할 검색어를 저장한다.
- */
-searchKeyword.value = keyword;
+  /**
+   * 검색어가 바뀌면 기존 검색 오류를 제거한다.
+   */
+  searchErrorMessage.value = "";
 
-/**
- * 검색어가 바뀌면 기존 검색 오류를 제거한다.
- */
-searchErrorMessage.value = "";
+  /**
+   * 이전 debounce 타이머를 제거한다.
+   */
+  clearTimeout(searchDebounceTimer);
 
-/**
- * 이전 debounce 타이머를 제거한다.
- */
-clearTimeout(searchDebounceTimer);
+  /**
+   * 입력값이 바뀌는 즉시 기존 검색 결과와
+   * 검색 선택 상태를 초기화한다.
+   *
+   * 실행 중인 이전 검색 요청도 논리적으로 무효화한다.
+   */
+  regionStore.clearRegionSearchState();
 
-/**
- * 입력값이 바뀌는 즉시 기존 검색 결과와
- * 검색 선택 상태를 초기화한다.
- * 
- * 실행 중인 이전 검색 요청도 논리적으로 무효화한다.
- */
-regionStore.clearRegionSearchState();
+  /**
+   * 앞뒤 공백을 제거한다.
+   */
+  const normalizedKeyword = keyword.trim();
 
-/**
- * 앞뒤 공백을 제거한다.
- */
-const normalizedKeyword = keyword.trim();
+  /**
+   * 공백 제거 후 빈 문자열이면
+   * 검색 API를 호출하지 않는다.
+   */
+  if (!normalizedKeyword) {
+    isSearchPending.value = false;
+    return;
+  }
 
-/**
- * 공백 제거 후 빈 문자열이면
- * 검색 API를 호출하지 않는다.
- */
-if(!normalizedKeyword){
-  isSearchPending.value = false;
-  return;
-}
+  /**
+   * debounce 대기 시간도 화면에서는
+   * 검색 중 상태로 표시한다.
+   */
+  isSearchPending.value = true;
 
-/**
- * debounce 대기 시간도 화면에서는 
- * 검색 중 상태로 표시한다.
- */
-isSearchPending.value = true;
+  /**
+   * 마지막 입력 후 350ms가 지나면
+   * 지역 검색 API를 호출한다.
+   */
+  searchDebounceTimer = setTimeout(async () => {
+    isSearchPending.value = false;
 
-/**
- * 마지막 입력 후 350ms가 지나면
- * 지역 검색 API를 호출한다.
- */
-searchDebounceTimer = 
-  setTimeout(
-    async () => {
-      isSearchPending.value = false;
-
-      try{
-        await regionStore.searchRegions(normalizedKeyword);
-      }catch(error){
-        handleSearchError(error);
-      }
-    },
-    350
-  );
+    try {
+      await regionStore.searchRegions(normalizedKeyword);
+    } catch (error) {
+      handleSearchError(error);
+    }
+  }, 350);
 };
 
 /**
  * 지역명 검색 결과 선택
  */
-const handleSearchRegionSelect = 
-  async (region) =>{
-    try{
-      searchErrorMessage.value = "";
+const handleSearchRegionSelect = async (region) => {
+  try {
+    searchErrorMessage.value = "";
 
-      /**
-       * 검색 결과를 Store의 공통 선택 후보로 저장한다.
-       */
-      regionStore.selectSearchRegion(region);
+    /**
+     * 검색 결과를 Store의 공통 선택 후보로 저장한다.
+     */
+    regionStore.selectSearchRegion(region);
 
-      /**
-       * 데스크톱이면 검색 결과를 선택하는 즉시
-       * 기존 상세·경계 API를 호출하여 미리 보여준다.
-       * 
-       * 모바일이면 previewRegionOnDesktop()에서
-       * 아무 작업도 하지 않고 반환한다.
-       */
-      await previewRegionOnDesktop(region);
-    }catch(error){
-      handleError(error);
-    }
+    /**
+     * 데스크톱이면 검색 결과를 선택하는 즉시
+     * 기존 상세·경계 API를 호출하여 미리 보여준다.
+     *
+     * 모바일이면 previewRegionOnDesktop()에서
+     * 아무 작업도 하지 않고 반환한다.
+     */
+    await previewRegionOnDesktop(region);
+  } catch (error) {
+    handleError(error);
   }
+};
 
 /**
  * 컴포넌트가 화면에 생성될 때 실행
  */
 onMounted(async () => {
-  viewportMediaQuery = window.matchMedia(
-    "(min-width: 768px)",
-  );
+  viewportMediaQuery = window.matchMedia("(min-width: 768px)");
 
   isDesktop.value = viewportMediaQuery.matches;
 
-  viewportMediaQuery.addEventListener(
-    "change",
-    updateViewportMode,
-  );
+  viewportMediaQuery.addEventListener("change", updateViewportMode);
 
   await initializePage();
 });
@@ -724,7 +667,7 @@ onMounted(async () => {
 /**
  * 컴포넌트가 제거되기 전에 실행
  */
-onBeforeUnmount(()=>{
+onBeforeUnmount(() => {
   /**
    * 지도 확대 단계 타이머 제거
    */
@@ -745,10 +688,7 @@ onBeforeUnmount(()=>{
   /**
    * 화면 크기 변경 이벤트 제거
    */
-  viewportMediaQuery?.removeEventListener(
-    "change",
-    updateViewportMode,
-  );
+  viewportMediaQuery?.removeEventListener("change", updateViewportMode);
 
   /**
    * Region Store 상태 초기화
@@ -760,83 +700,78 @@ onBeforeUnmount(()=>{
 <template>
   <section class="property-map-page">
     <div class="property-map-stage">
-    <!-- 카카오 지도 -->
-    <KakaoMap
-      ref="kakaoMapRef"
-      :region-detail="regionStore.regionDetail"
-      :response-type="propertyMapStore.responseType"
-      :map-items="propertyMapStore.truncated ? [] : propertyMapStore.items"
-      :truncated="propertyMapStore.truncated"
-      :selected-property-id="propertyMapStore.selectedPropertyId"
-      @ready="handleMapReady"
-      @level-change="handleLevelChange"
-      @bounds-change="handleMapBoundsChange"
-      @select-region-aggregate="handleRegionAggregateSelect"
-      @select-property="handleMapPropertySelect"
-      @map-error="handleError"
-    />
-
-    <div
-      v-if="propertyMapStore.truncated"
-      class="map-property-notice"
-      role="status"
-    >
-      매물이 많습니다. 지도를 확대해 주세요.
-    </div>
-
-    <div
-      v-else-if="
-        !propertyMapStore.isLoading &&
-        propertyMapStore.responseType &&
-        propertyMapStore.totalCount === 0
-      "
-      class="map-property-notice"
-      role="status"
-    >
-      현재 지도 영역에 매물이 없습니다.
-    </div>
-
-    <p
-      v-if="propertyMapStore.errorMessage"
-      class="map-property-error"
-      role="alert"
-    >
-      {{ propertyMapStore.errorMessage }}
-    </p>
-
-    <div
-      v-if="propertyMapStore.isLoading"
-      class="map-property-loading"
-      role="status"
-    >
-      매물을 불러오는 중입니다.
-    </div>
-
-    <!-- 지도 우측 하단 버튼 -->
-    <div class="map-floating-actions">
-      <IconButton
-        icon="⌾"
-        label="현재 위치로 이동"
-        @click="moveToCurrentLocation"
+      <!-- 카카오 지도 -->
+      <KakaoMap
+        ref="kakaoMapRef"
+        :region-detail="regionStore.regionDetail"
+        :response-type="propertyMapStore.responseType"
+        :map-items="propertyMapStore.truncated ? [] : propertyMapStore.items"
+        :truncated="propertyMapStore.truncated"
+        :selected-property-id="propertyMapStore.selectedPropertyId"
+        @ready="handleMapReady"
+        @level-change="handleLevelChange"
+        @bounds-change="handleMapBoundsChange"
+        @select-region-aggregate="handleRegionAggregateSelect"
+        @select-property="handleMapPropertySelect"
+        @map-error="handleError"
       />
 
-      <IconButton
-        icon="↻"
-        label="현재 지역 다시 조회"
-        :loading="regionStore.isDetailLoading"
-        @click="refreshDisplayedRegion"
-      />
-    </div>
+      <div
+        v-if="propertyMapStore.truncated"
+        class="map-property-notice"
+        role="status"
+      >
+        매물이 많습니다. 지도를 확대해 주세요.
+      </div>
 
-    <!-- 지역 상세·경계 로딩 -->
-    <div
-      v-if="regionStore.isDetailLoading"
-      class="map-loading"
-      role="status"
-    >
-      지역 경계를 불러오는 중입니다.
-    </div>
+      <div
+        v-else-if="
+          !propertyMapStore.isLoading &&
+          propertyMapStore.responseType &&
+          propertyMapStore.totalCount === 0
+        "
+        class="map-property-notice"
+        role="status"
+      >
+        현재 지도 영역에 매물이 없습니다.
+      </div>
 
+      <p
+        v-if="propertyMapStore.errorMessage"
+        class="map-property-error"
+        role="alert"
+      >
+        {{ propertyMapStore.errorMessage }}
+      </p>
+
+      <div
+        v-if="propertyMapStore.isLoading"
+        class="map-property-loading"
+        role="status"
+      >
+        매물을 불러오는 중입니다.
+      </div>
+
+      <!-- 지도 우측 하단 버튼 -->
+      <div class="map-floating-actions">
+        <IconButton
+          icon="⌾"
+          label="현재 위치로 이동"
+          @click="moveToCurrentLocation"
+        />
+
+        <IconButton
+          icon="↻"
+          label="현재 지역 다시 조회"
+          :loading="regionStore.isDetailLoading"
+          @click="refreshDisplayedRegion"
+        />
+      </div>
+
+      <!-- 지역 상세·경계 로딩 -->
+      <div v-if="regionStore.isDetailLoading" class="map-loading" role="status">
+        지역 경계를 불러오는 중입니다.
+      </div>
     </div>
 
     <aside
@@ -846,7 +781,7 @@ onBeforeUnmount(()=>{
       <!-- 지도 상단 검색 영역 -->
       <div
         class="map-top-overlay"
-        :class="{'map-top-overlay--selector-open':isRegionSelectorOpen}"
+        :class="{ 'map-top-overlay--selector-open': isRegionSelectorOpen }"
       >
         <div class="map-search-row">
           <button
@@ -903,37 +838,28 @@ onBeforeUnmount(()=>{
         <!-- 지역 선택 및 지역명 검색 -->
         <RegionSelector
           :open="isRegionSelectorOpen"
-
           :sido-regions="regionStore.sidoRegions"
           :sigungu-regions="regionStore.sigunguRegions"
           :emd-regions="regionStore.emdRegions"
-
           :search-keyword="searchKeyword"
           :search-results="regionStore.searchResults"
           :is-search-loading="isSearchPending || regionStore.isSearchLoading"
           :search-error-message="searchErrorMessage"
-
           :selected-sido-id="regionStore.selectedSido?.regionId ?? null"
           :selected-sigungu-id="regionStore.selectedSigungu?.regionId ?? null"
           :selected-emd-id="regionStore.selectedEmd?.regionId ?? null"
           :selected-region-id="regionStore.selectedRegion?.regionId ?? null"
-
           @update:search-keyword="handleSearchKeywordUpdate"
           @select-search-region="handleSearchRegionSelect"
-
           @select-sido="handleSidoSelect"
           @select-sigungu="handleSigunguSelect"
           @select-emd="handleEmdSelect"
-
           @confirm="applySelectedRegion"
           @close="closeRegionSelector"
         />
 
         <!-- 지역 상세·지도 오류 -->
-        <p
-          v-if="inlineErrorMessage"
-          class="map-error-message"
-        >
+        <p v-if="inlineErrorMessage" class="map-error-message">
           {{ inlineErrorMessage }}
         </p>
       </div>
