@@ -28,8 +28,8 @@
   --zipda-color-subtle-hover: #dde5d4;
   --zipda-color-subtle-background: #efeee9;
 
-  /* Layout: Figma frame width 344px */
-  --zipda-app-width: 344px;
+  /* Layout: 모바일 시안은 344px이지만 넓은 모바일·태블릿까지 유동 확장 */
+  --zipda-app-width: 560px;
   --zipda-page-padding: 20px;
   --zipda-header-height: 52px;
   --zipda-bottom-nav-height: 64px;
@@ -403,7 +403,7 @@ p {
 /* ========================================================================== */
 @media (min-width: 768px) {
   /*
-   * 모바일에서는 344px 앱 프레임을 사용하지만,
+   * 모바일·태블릿에서는 최대 560px 앱 프레임을 사용하지만,
    * 데스크톱에서는 브라우저 전체 너비를 사용한다.
    */
   .app-shell {

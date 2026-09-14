@@ -4,6 +4,8 @@ import { useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
+import agentApplicationCode from "../../constants/agentApplicationCode.js";
+import memberMessage from "../../constants/memberMessage.js";
 import { useMemberStore } from "../../store/member/member.js";
 
 const router = useRouter();
@@ -35,13 +37,6 @@ const formReady = computed(
     form.agentRegistrationNo.trim().length <= 20,
 );
 
-const readError = (error, fallback) => {
-  const responseData = error?.response?.data;
-  if (typeof responseData?.message === "string") return responseData.message;
-  if (typeof responseData?.data === "string") return responseData.data;
-  return fallback;
-};
-
 const fillForm = (currentApplication) => {
   form.agencyName = currentApplication.agencyName || "";
   form.representativeName = currentApplication.representativeName || "";
@@ -59,11 +54,8 @@ const loadApplication = async () => {
       pageError.value =
         "이미 제출된 신청입니다. 현재 화면에서는 내용을 수정할 수 없습니다.";
     }
-  } catch (error) {
-    pageError.value = readError(
-      error,
-      "OCR 결과를 불러오지 못했습니다. 서류를 다시 등록해 주세요.",
-    );
+  } catch {
+    pageError.value = memberMessage.getMemberMessage("AGENT_OCR_LOAD_ERROR");
   } finally {
     loading.value = false;
   }
@@ -92,10 +84,9 @@ const submitApplication = async () => {
       path: "/mypage",
       query: { agentSubmitted: "true" },
     });
-  } catch (error) {
-    formError.value = readError(
-      error,
-      "중개사 전환 신청을 제출하지 못했습니다.",
+  } catch {
+    formError.value = memberMessage.getMemberMessage(
+      "AGENT_APPLICATION_SUBMIT_ERROR",
     );
   } finally {
     submitting.value = false;
@@ -190,7 +181,9 @@ onMounted(loadApplication);
                   ? "사업자 등록증"
                   : "중개사무소 등록증"
               }}
-              <span>{{ document.ocrStatus }}</span>
+              <span>
+                {{ agentApplicationCode.getOcrStatusName(document.ocrStatus) }}
+              </span>
             </summary>
             <pre>{{ document.ocrText || "추출된 원문이 없습니다." }}</pre>
           </details>

@@ -7,6 +7,7 @@ import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
 import MyFileInput from "../../component/input/MyFileInput.vue";
+import memberMessage from "../../constants/memberMessage.js";
 import {
   email as emailRule,
   password as passwordRule,
@@ -83,9 +84,6 @@ const stepName = computed(
       step.value - 1
     ],
 );
-const errorMessage = (error, fallback) =>
-  error?.response?.data?.data || error?.response?.data?.message || fallback;
-
 const handleChangeProfile = async (event) => {
   const file = event?.target?.files?.[0];
   if (!file) {
@@ -106,10 +104,9 @@ const handleChangeProfile = async (event) => {
     const uploadedFile = await fileStore.uploadProfile(file);
     form.profileFileId = uploadedFile.fileId;
     formError.value = "";
-  } catch (error) {
-    formError.value = errorMessage(
-      error,
-      "프로필 사진 업로드에 실패했습니다. 다시 시도해 주세요.",
+  } catch {
+    formError.value = memberMessage.getMemberMessage(
+      "PROFILE_IMAGE_UPLOAD_ERROR",
     );
   } finally {
     profileUploading.value = false;
@@ -122,11 +119,8 @@ const loadTerms = async () => {
     terms.value.forEach((term) => {
       agreed[term.termId] = false;
     });
-  } catch (error) {
-    termsError.value = errorMessage(
-      error,
-      "약관을 불러오지 못했습니다. 다시 시도해 주세요.",
-    );
+  } catch {
+    termsError.value = memberMessage.getMemberMessage("TERMS_LOAD_ERROR");
   }
 };
 
@@ -163,8 +157,10 @@ const checkDuplicate = async (field) => {
     checked[field].message = result.available
       ? "사용할 수 있습니다."
       : "이미 사용 중인 정보입니다.";
-  } catch (error) {
-    checked[field].message = errorMessage(error, "중복 확인에 실패했습니다.");
+  } catch {
+    checked[field].message = memberMessage.getMemberMessage(
+      "DUPLICATE_CHECK_ERROR",
+    );
   } finally {
     checking.value = "";
   }
@@ -197,8 +193,8 @@ const sendVerification = async () => {
     verification.id = result.verificationId;
     formError.value = "";
     step.value = 3;
-  } catch (error) {
-    formError.value = errorMessage(error, "인증번호 전송에 실패했습니다.");
+  } catch {
+    formError.value = memberMessage.getMemberMessage("EMAIL_CODE_SEND_ERROR");
   } finally {
     verification.sending = false;
   }
@@ -215,10 +211,9 @@ const resendVerification = async () => {
       message: "새 인증번호를 이메일로 보냈습니다.",
       resendNeeded: false,
     });
-  } catch (error) {
-    verification.message = errorMessage(
-      error,
-      "인증번호를 다시 보내지 못했습니다.",
+  } catch {
+    verification.message = memberMessage.getMemberMessage(
+      "EMAIL_CODE_RESEND_ERROR",
     );
   } finally {
     verification.sending = false;
@@ -241,9 +236,11 @@ const verifyCode = async () => {
     verification.message = verification.verified
       ? "이메일 인증이 완료되었습니다."
       : "인증번호를 확인해 주세요.";
-  } catch (error) {
-    verification.message = errorMessage(error, "인증번호를 확인해 주세요.");
-    verification.resendNeeded = /5|횟수|attempt/i.test(verification.message);
+  } catch {
+    verification.message = memberMessage.getMemberMessage(
+      "EMAIL_CODE_VERIFY_ERROR",
+    );
+    verification.resendNeeded = true;
   } finally {
     verification.checking = false;
   }
@@ -277,11 +274,8 @@ const signup = async () => {
       })),
     });
     router.replace("/sign-in");
-  } catch (error) {
-    formError.value = errorMessage(
-      error,
-      "회원가입에 실패했습니다. 다시 시도해 주세요.",
-    );
+  } catch {
+    formError.value = memberMessage.getMemberMessage("SIGN_UP_ERROR");
   } finally {
     submitting.value = false;
   }
@@ -360,48 +354,50 @@ onBeforeUnmount(() => {
         class="form step-content"
         @submit.prevent="sendVerification"
       >
-        <div class="with-button">
-          <MyInput
-            v-model="form.email"
-            label="이메일"
-            type="email"
-            placeholder="example@email.com"
-            required
-            @update:model-value="resetCheck('email')"
-          />
-          <MyButton
-            type="button"
-            size="small"
-            variant="secondary"
-            :loading="checking === 'email'"
-            @click="checkDuplicate('email')"
-            >중복 확인</MyButton
-          >
-        </div>
+        <MyInput
+          v-model="form.email"
+          label="이메일"
+          type="email"
+          placeholder="example@gmail.com"
+          required
+          @update:model-value="resetCheck('email')"
+        >
+          <template #trailing>
+            <button
+              class="input-check-button"
+              type="button"
+              :disabled="checking === 'email'"
+              @click="checkDuplicate('email')"
+            >
+              {{ checking === "email" ? "확인 중" : "중복 확인" }}
+            </button>
+          </template>
+        </MyInput>
         <p
           v-if="checked.email.message"
           :class="checked.email.available ? 'text-success' : 'text-error'"
         >
           {{ checked.email.message }}
         </p>
-        <div class="with-button">
-          <MyInput
-            v-model="form.nickname"
-            label="닉네임"
-            placeholder="닉네임 입력 (2~10자)"
-            maxlength="10"
-            required
-            @update:model-value="resetCheck('nickname')"
-          />
-          <MyButton
-            type="button"
-            size="small"
-            variant="secondary"
-            :loading="checking === 'nickname'"
-            @click="checkDuplicate('nickname')"
-            >중복 확인</MyButton
-          >
-        </div>
+        <MyInput
+          v-model="form.nickname"
+          label="닉네임"
+          placeholder="닉네임 입력 (2~10자)"
+          maxlength="10"
+          required
+          @update:model-value="resetCheck('nickname')"
+        >
+          <template #trailing>
+            <button
+              class="input-check-button"
+              type="button"
+              :disabled="checking === 'nickname'"
+              @click="checkDuplicate('nickname')"
+            >
+              {{ checking === "nickname" ? "확인 중" : "중복 확인" }}
+            </button>
+          </template>
+        </MyInput>
         <p
           v-if="checked.nickname.message"
           :class="checked.nickname.available ? 'text-success' : 'text-error'"
@@ -436,23 +432,25 @@ onBeforeUnmount(() => {
       </form>
 
       <section v-else-if="step === 3" class="form step-content">
-        <div class="with-button">
-          <MyInput
-            v-model="verification.code"
-            label="인증번호"
-            placeholder="6자리 숫자"
-            inputmode="numeric"
-            maxlength="6"
-            required
-          />
-          <MyButton
-            type="button"
-            size="small"
-            :loading="verification.checking"
-            @click="verifyCode"
-            >확인</MyButton
-          >
-        </div>
+        <MyInput
+          v-model="verification.code"
+          label="인증번호"
+          placeholder="6자리 숫자"
+          inputmode="numeric"
+          maxlength="6"
+          required
+        >
+          <template #trailing>
+            <button
+              class="input-check-button"
+              type="button"
+              :disabled="verification.checking"
+              @click="verifyCode"
+            >
+              {{ verification.checking ? "확인 중" : "확인" }}
+            </button>
+          </template>
+        </MyInput>
         <p
           v-if="verification.message"
           :class="verification.verified ? 'text-success' : 'text-error'"
@@ -667,11 +665,32 @@ onBeforeUnmount(() => {
   font-size: 24px;
   cursor: pointer;
 }
-.with-button {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: end;
+.input-check-button {
+  flex: 0 0 auto;
+  margin-left: 10px;
+  padding: 4px 2px;
+  color: var(--zipda-color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.input-check-button:hover:not(:disabled),
+.input-check-button:focus-visible {
+  color: var(--zipda-color-primary);
+}
+.input-check-button:focus-visible {
+  outline: 2px solid var(--zipda-color-primary);
+  outline-offset: 2px;
+}
+.input-check-button:disabled {
+  cursor: wait;
+  opacity: 0.5;
 }
 .text-success {
   color: var(--zipda-color-primary-active);
@@ -722,7 +741,7 @@ onBeforeUnmount(() => {
   background: rgb(0 0 0 / 35%);
 }
 .modal {
-  width: min(100%, 344px);
+  width: min(100%, 520px);
   max-height: 70dvh;
   padding: 20px;
   overflow: auto;

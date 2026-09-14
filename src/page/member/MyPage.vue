@@ -2,6 +2,9 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
+import ProfileImagePicker from "../../component/input/ProfileImagePicker.vue";
+import memberMessage from "../../constants/memberMessage.js";
+import memberRoleCode from "../../constants/memberRoleCode.js";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 import { useMemberStore } from "../../store/member/member.js";
 
@@ -18,6 +21,7 @@ const displayName = computed(
   () => member.value.name || member.value.nickname || "회원",
 );
 const role = computed(() => member.value.role || authStore.role || "USER");
+const roleName = computed(() => memberRoleCode.getMemberRoleName(role.value));
 const isAgent = computed(() => role.value === "AGENT");
 const agentId = computed(() => member.value.agent?.agentId);
 const applicationSubmitted = computed(
@@ -27,9 +31,8 @@ const applicationSubmitted = computed(
 const loadProfile = async () => {
   try {
     await memberStore.getMyProfile();
-  } catch (error) {
-    loadError.value =
-      error?.response?.data?.message || "프로필 정보를 불러오지 못했습니다.";
+  } catch {
+    loadError.value = memberMessage.getMemberMessage("PROFILE_LOAD_ERROR");
   }
 };
 
@@ -51,23 +54,15 @@ onMounted(loadProfile);
       <p v-if="loadError" class="error-box">{{ loadError }}</p>
 
       <section class="profile" aria-label="내 프로필">
-        <button
-          type="button"
-          class="profile__image-button"
-          aria-label="프로필 수정으로 이동"
-          @click="router.push('/mypage/profile')"
-        >
-          <img
-            v-if="member.profileImageUrl"
-            :src="member.profileImageUrl"
-            alt=""
-            referrerpolicy="no-referrer"
-          />
-          <span v-else>{{ displayName.slice(0, 1) }}</span>
-          <i aria-hidden="true">✎</i>
-        </button>
+        <ProfileImagePicker
+          :current-url="member.profileImageUrl || ''"
+          :name="displayName"
+          preview-only
+          compact
+          @preview-click="router.push('/mypage/profile')"
+        />
         <div class="profile__identity">
-          <p><strong>{{ displayName }}</strong><span>{{ role }}</span></p>
+          <p><strong>{{ displayName }}</strong><span>{{ roleName }}</span></p>
           <small>{{ member.email }}</small>
         </div>
       </section>
@@ -120,44 +115,6 @@ onMounted(loadProfile);
   justify-items: center;
   gap: 10px;
   padding: 8px 0;
-}
-
-.profile__image-button {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 92px;
-  height: 92px;
-  color: var(--zipda-color-primary-active);
-  background: var(--zipda-color-primary-light);
-  border: 1px solid var(--zipda-color-border);
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 30px;
-  font-weight: 700;
-}
-
-.profile__image-button img {
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  object-fit: cover;
-}
-
-.profile__image-button i {
-  position: absolute;
-  right: 0;
-  bottom: 1px;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  color: white;
-  background: var(--zipda-color-primary);
-  border: 3px solid white;
-  border-radius: 50%;
-  font-size: 12px;
-  font-style: normal;
 }
 
 .profile__identity {
