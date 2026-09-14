@@ -33,6 +33,10 @@ const props = defineProps({
     type: [String, Number],
     default: null,
   },
+  selectedProperty: {
+    type: Object,
+    default: null,
+  },
 });
 
 const emit = defineEmits([
@@ -55,6 +59,8 @@ let propertyMarkerListeners = [];
 let propertyOverlays = [];
 let mapResizeObserver = null;
 let mapRelayoutFrame = null;
+let pendingBoundsChangeReason = "";
+let pendingReasonResetTimer = null;
 
 /**
  * 현재 표시 중인 매물 마커·클러스터·오버레이를 제거한다.
@@ -105,12 +111,32 @@ const getViewport = () => {
   };
 };
 
-const emitViewport = () => {
+const emitViewport = (reason = "map") => {
   const viewport = getViewport();
 
   if (viewport) {
-    emit("bounds-change", viewport);
+    emit("bounds-change", viewport, { reason });
   }
+};
+
+const setPendingBoundsChangeReason = (reason) => {
+  clearTimeout(pendingReasonResetTimer);
+  pendingBoundsChangeReason = reason;
+
+  pendingReasonResetTimer = setTimeout(() => {
+    pendingBoundsChangeReason = "";
+    pendingReasonResetTimer = null;
+  }, 1500);
+};
+
+const handleMapIdle = () => {
+  const reason = pendingBoundsChangeReason || "map";
+
+  clearTimeout(pendingReasonResetTimer);
+  pendingBoundsChangeReason = "";
+  pendingReasonResetTimer = null;
+
+  emitViewport(reason);
 };
 
 /**
@@ -131,7 +157,7 @@ const relayoutMap = () => {
 
   map.value.relayout();
   map.value.setCenter(center);
-  emitViewport();
+  emitViewport("layout");
 };
 
 const scheduleMapRelayout = () => {
@@ -178,15 +204,15 @@ const createRegionAggregateOverlay = (item) => {
 
 const createPropertyPriceOverlay = (item) => {
   const button = document.createElement("button");
+  const isSelected =
+    String(item.propertyId) === String(props.selectedPropertyId);
 
   button.type = "button";
   button.className = "zipda-property-price-marker";
   button.textContent = formatPropertyPrice(item);
   button.setAttribute("aria-label", `${item.title} ${button.textContent}`);
 
-  if (
-    String(item.propertyId) === String(props.selectedPropertyId)
-  ) {
+  if (isSelected) {
     button.classList.add("zipda-property-price-marker--selected");
   }
 
@@ -202,6 +228,7 @@ const createPropertyPriceOverlay = (item) => {
     ),
     content: button,
     yAnchor: 1,
+    zIndex: isSelected ? 30 : 1,
   });
 };
 
@@ -221,10 +248,14 @@ const createPropertyGroupOverlay = (items) => {
 
   button.type = "button";
   button.className = "zipda-property-group-marker";
-  button.textContent = `매물 ${items.length.toLocaleString("ko-KR")}개`;
+  button.textContent = includesSelectedProperty
+    ? `선택 · 매물 ${items.length.toLocaleString("ko-KR")}개`
+    : `매물 ${items.length.toLocaleString("ko-KR")}개`;
   button.setAttribute(
     "aria-label",
-    `가까운 매물 ${items.length.toLocaleString("ko-KR")}개, 지도를 확대합니다.`,
+    includesSelectedProperty
+      ? `선택한 매물이 포함된 가까운 매물 ${items.length.toLocaleString("ko-KR")}개, 지도를 확대합니다.`
+      : `가까운 매물 ${items.length.toLocaleString("ko-KR")}개, 지도를 확대합니다.`,
   );
 
   if (includesSelectedProperty) {
@@ -249,6 +280,7 @@ const createPropertyGroupOverlay = (items) => {
     position,
     content: button,
     yAnchor: 1,
+    zIndex: includesSelectedProperty ? 30 : 1,
   });
 };
 
@@ -328,28 +360,70 @@ const renderPropertyMarkers = () => {
   );
 };
 
-const renderPropertyLayers = () => {
-  clearPropertyLayers();
+/**
+ * 목록에서 선택한 매물이 지도 API 응답에 포함되지 않았거나
+ * 가격 마커 단계가 아닐 때도 선택 위치를 확인할 수 있게 한다.
+ */
+const renderSelectedPropertyOverlay = () => {
+  const selectedProperty = props.selectedProperty;
+
+  if (!selectedProperty) {
+    return;
+  }
+
+  const latitude = Number(selectedProperty.latitude);
+  const longitude = Number(selectedProperty.longitude);
 
   if (
-    !map.value ||
-    props.truncated ||
-    props.mapItems.length === 0
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
   ) {
     return;
   }
 
-  switch (props.responseType) {
-    case "REGION_AGGREGATE":
-      renderRegionAggregates();
-      break;
-    case "PROPERTY_POINTS":
-      renderPropertyPoints();
-      break;
-    case "PROPERTY_MARKER":
-      renderPropertyMarkers();
-      break;
+  const selectedExistsInMap = props.mapItems.some(
+    (item) =>
+      String(item.propertyId) === String(selectedProperty.propertyId),
+  );
+
+  if (
+    props.responseType === "PROPERTY_MARKER" &&
+    selectedExistsInMap
+  ) {
+    return;
   }
+
+  propertyOverlays.push(
+    createPropertyPriceOverlay(selectedProperty),
+  );
+};
+
+const renderPropertyLayers = () => {
+  clearPropertyLayers();
+
+  if (!map.value) {
+    return;
+  }
+
+  if (!props.truncated && props.mapItems.length > 0) {
+    switch (props.responseType) {
+      case "REGION_AGGREGATE":
+        renderRegionAggregates();
+        break;
+      case "PROPERTY_POINTS":
+        renderPropertyPoints();
+        break;
+      case "PROPERTY_MARKER":
+        renderPropertyMarkers();
+        break;
+    }
+  }
+
+  renderSelectedPropertyOverlay();
 };
 
 /**
@@ -530,16 +604,27 @@ const moveToCurrentLocation = () => {
  * 목록에서 선택한 매물의 공개 좌표로 지도를 이동한다.
  */
 const focusProperty = (item) => {
-  if (!map.value || !item) {
-    return;
+  const latitude = Number(item?.latitude);
+  const longitude = Number(item?.longitude);
+
+  if (
+    !map.value ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return false;
   }
 
-  map.value.panTo(
-    new kakaoApi.maps.LatLng(
-      item.latitude,
-      item.longitude,
-    ),
-  );
+  const position = new kakaoApi.maps.LatLng(latitude, longitude);
+
+  setPendingBoundsChangeReason("property-focus");
+  map.value.panTo(position);
+
+  return true;
 };
 
 /**
@@ -585,7 +670,7 @@ const initializeMap = async () => {
     kakaoApi.maps.event.addListener(
       map.value,
       "idle",
-      emitViewport,
+      handleMapIdle,
     );
 
     emit(
@@ -630,6 +715,7 @@ watch(
     props.mapItems,
     props.truncated,
     props.selectedPropertyId,
+    props.selectedProperty,
   ],
   renderPropertyLayers,
   { deep: true },
@@ -659,9 +745,13 @@ onBeforeUnmount(() => {
     kakaoApi.maps.event.removeListener(
       map.value,
       "idle",
-      emitViewport,
+      handleMapIdle,
     );
   }
+
+  clearTimeout(pendingReasonResetTimer);
+  pendingBoundsChangeReason = "";
+  pendingReasonResetTimer = null;
 });
 
 defineExpose({

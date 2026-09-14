@@ -48,6 +48,11 @@ const routes = [
     meta: setMeta(false, false, [], true),
   },
   {
+    path: "/properties",
+    component: () => import("../page/property/PropertyMapPage.vue"),
+    meta: setMeta(false, false, [], true),
+  },
+  {
     path: "/favorites",
     component: () => import("../page/favorite/FavoriteListPage.vue"),
     meta: setMeta(true, false, ["USER", "AGENT"], true),
