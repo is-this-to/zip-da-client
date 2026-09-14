@@ -1,5 +1,12 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  shallowRef,
+} from "vue";
 
 import { useRegionStore } from "../../store/region/useRegionStore.js";
 import { usePropertyMapStore } from "../../store/property/usePropertyMapStore.js";
@@ -19,6 +26,13 @@ const propertyListStore = usePropertyListStore();
 const myErrorStore = useMyErrorStore();
 
 const kakaoMapRef = shallowRef(null);
+const mapStageRef = ref(null);
+
+/**
+ * 지도에서 매물을 선택한 경우에만 목록의 선택 카드를 자동으로 표시한다.
+ * 목록 카드 선택 시에는 모바일 지도 영역으로 화면을 이동한다.
+ */
+const shouldScrollSelectedCard = ref(false);
 
 /**
  * 지역 선택창 상태
@@ -492,12 +506,26 @@ const handleRegionAggregateSelect = async (region) => {
 };
 
 const handleMapPropertySelect = (property) => {
+  shouldScrollSelectedCard.value = true;
   propertyMapStore.selectProperty(property);
 };
 
-const handlePropertyCardSelect = (property) => {
+const handlePropertyCardSelect = async (property) => {
+  shouldScrollSelectedCard.value = false;
   propertyMapStore.selectProperty(property);
-  kakaoMapRef.value?.focusProperty(property);
+
+  const focused = kakaoMapRef.value?.focusProperty(property);
+
+  if (!focused || isDesktop.value) {
+    return;
+  }
+
+  await nextTick();
+
+  mapStageRef.value?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
 };
 
 const loadMoreProperties = async () => {
@@ -702,7 +730,10 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="property-map-page">
-    <div class="property-map-stage">
+    <div
+      ref="mapStageRef"
+      class="property-map-stage"
+    >
       <!-- 카카오 지도 -->
       <KakaoMap
         ref="kakaoMapRef"
@@ -871,6 +902,7 @@ onBeforeUnmount(() => {
       <PropertyMapList
         :items="propertyListStore.items"
         :selected-property-id="propertyMapStore.selectedPropertyId"
+        :auto-scroll-selected-property="shouldScrollSelectedCard"
         :sort="propertyMapStore.appliedFilters.sort"
         :has-next="propertyListStore.hasNext"
         :is-initial-loading="propertyListStore.isInitialLoading"
