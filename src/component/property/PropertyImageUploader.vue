@@ -5,7 +5,11 @@ import {
   createPropertyUploadSession,
   putPropertyFile,
 } from "../../api/propertyFileApi.js";
-import { createFilePreviewUrl } from "../../api/propertyFilePolicy.js";
+import {
+  createFilePreviewUrl,
+  getPropertyFileMoveState,
+  reorderPropertyFiles,
+} from "../../api/propertyFilePolicy.js";
 
 const emit = defineEmits(["busy-change"]);
 const fileIds = defineModel({ type: Array, default: () => [] });
@@ -76,13 +80,11 @@ const removeFile = (index) => {
 };
 
 const moveFile = (index, offset) => {
-  const target = index + offset;
-  if (target < 0 || target >= uploadedFiles.value.length) return;
-  const reordered = [...uploadedFiles.value];
-  [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
-  uploadedFiles.value = reordered;
+  uploadedFiles.value = reorderPropertyFiles(uploadedFiles.value, index, offset);
   syncFileIds();
 };
+
+const moveState = (index) => getPropertyFileMoveState(index, uploadedFiles.value.length);
 
 onBeforeUnmount(() => {
   uploadedFiles.value.forEach((item) => {
@@ -123,16 +125,21 @@ onBeforeUnmount(() => {
     <p v-if="uploadedFiles.length === 0" class="info-box">complete까지 성공한 사진이 아직 없습니다.</p>
 
     <ol v-else class="image-list">
-      <li v-for="(item, index) in uploadedFiles" :key="item.fileId" class="image-item">
-        <img v-if="item.previewUrl" :src="item.previewUrl" :alt="item.name" />
-        <span v-else class="image-placeholder" aria-hidden="true">사진</span>
-        <div class="image-copy">
-          <strong>{{ index === 0 ? "대표 이미지" : `${index + 1}번째 사진` }}</strong>
-          <span>{{ item.name }}</span>
+      <li
+        v-for="(item, index) in uploadedFiles"
+        :key="item.fileId"
+        class="image-item"
+        :aria-label="index === 0 ? `대표사진, ${item.name}` : `${index + 1}번째 사진, ${item.name}`"
+      >
+        <div class="image-thumbnail">
+          <img v-if="item.previewUrl" :src="item.previewUrl" :alt="item.name" />
+          <span v-else class="image-placeholder" aria-hidden="true">사진</span>
+          <span v-if="index === 0" class="representative-badge">대표</span>
         </div>
+        <span class="image-name" :title="item.name">{{ item.name }}</span>
         <div class="image-actions" aria-label="사진 순서 및 삭제">
-          <button type="button" :disabled="isUploading || index === 0" aria-label="앞으로 이동" @click="moveFile(index, -1)">←</button>
-          <button type="button" :disabled="isUploading || index === uploadedFiles.length - 1" aria-label="뒤로 이동" @click="moveFile(index, 1)">→</button>
+          <button type="button" :disabled="isUploading || !moveState(index).canMoveBackward" aria-label="앞으로 이동" @click="moveFile(index, -1)">←</button>
+          <button type="button" :disabled="isUploading || !moveState(index).canMoveForward" aria-label="뒤로 이동" @click="moveFile(index, 1)">→</button>
           <button type="button" :disabled="isUploading" aria-label="사진 삭제" @click="removeFile(index)">삭제</button>
         </div>
       </li>
@@ -150,16 +157,15 @@ onBeforeUnmount(() => {
 .file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .upload-button { min-height: 88px; padding: 16px; color: var(--zipda-color-primary-active); background: var(--zipda-color-primary-light); border: 1px dashed var(--zipda-color-primary); border-radius: var(--zipda-radius-large); font: inherit; font-weight: 700; cursor: pointer; }
 .upload-button:disabled { cursor: not-allowed; opacity: 0.65; }
-.image-list { display: grid; gap: 9px; padding: 0; margin: 0; list-style: none; }
-.image-item { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px; border: 1px solid var(--zipda-color-border); border-radius: var(--zipda-radius-medium); }
-.image-item img,
-.image-placeholder { width: 64px; height: 64px; border-radius: var(--zipda-radius-small); object-fit: cover; }
-.image-placeholder { display: grid; place-items: center; color: var(--zipda-color-text-muted); background: var(--zipda-color-surface); font-size: 12px; }
-.image-copy { display: grid; gap: 4px; min-width: 0; }
-.image-copy strong { font-size: 13px; }
-.image-copy span { overflow: hidden; color: var(--zipda-color-text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.image-actions { display: flex; gap: 4px; }
-.image-actions button { min-width: 32px; min-height: 32px; padding: 5px 7px; background: var(--zipda-color-white); border: 1px solid var(--zipda-color-border); border-radius: var(--zipda-radius-small); color: var(--zipda-color-text); cursor: pointer; }
+.image-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 0 0 calc(84px + env(safe-area-inset-bottom)); margin: 0; list-style: none; }
+.image-item { display: grid; grid-template-rows: auto 1em auto; align-content: start; gap: 6px; min-width: 0; padding: 6px; border: 1px solid var(--zipda-color-border); border-radius: var(--zipda-radius-medium); }
+.image-thumbnail { position: relative; overflow: hidden; width: 100%; aspect-ratio: 1 / 1; background: var(--zipda-color-surface); border-radius: var(--zipda-radius-small); }
+.image-thumbnail img,
+.image-placeholder { display: block; width: 100%; height: 100%; object-fit: cover; }
+.image-placeholder { display: grid; place-items: center; color: var(--zipda-color-text-muted); font-size: 12px; }
+.representative-badge { position: absolute; top: 5px; left: 5px; padding: 3px 6px; color: var(--zipda-color-white); background: var(--zipda-color-primary-active); border-radius: 999px; font-size: 10px; font-weight: 700; }
+.image-name { overflow: hidden; color: var(--zipda-color-text-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.image-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; }
+.image-actions button { min-width: 0; min-height: 30px; padding: 4px 2px; background: var(--zipda-color-white); border: 1px solid var(--zipda-color-border); border-radius: var(--zipda-radius-small); color: var(--zipda-color-text); font-size: 11px; cursor: pointer; }
 .image-actions button:disabled { cursor: not-allowed; opacity: 0.45; }
-@media (max-width: 560px) { .image-item { grid-template-columns: 56px minmax(0, 1fr); } .image-item img, .image-placeholder { width: 56px; height: 56px; } .image-actions { grid-column: 1 / -1; justify-content: flex-end; } }
 </style>

@@ -1,3 +1,5 @@
+import { sanitizeRegistrationOptions } from "../../api/propertyOptionPolicy.js";
+
 // 임호탁 파트 (매물 API 경로·TSID·cursor·If-Match·멱등성 요청 정책)
 export const normalizePropertyId = (value) => {
   if (value == null) return null;
@@ -86,7 +88,7 @@ export const createPropertyCreateRequest = (form, integration) => ({
   description: form.description.trim(),
   fileIds: integration.fileIds.map(normalizePropertyId),
   address: { ...integration.address },
-  options: integration.options.map((option) => ({ ...option })),
+  options: sanitizeRegistrationOptions(integration.options),
 });
 
 export const createRequestFingerprint = async (request) => {

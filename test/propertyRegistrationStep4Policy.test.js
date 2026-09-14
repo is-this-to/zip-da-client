@@ -10,6 +10,7 @@ import {
   createFilePreviewUrl,
   normalizeUploadSessionFiles,
 } from "../src/api/propertyFilePolicy.js";
+import * as propertyFileOrdering from "../src/api/propertyFilePolicy.js";
 import {
   buildRegistrationOptions,
   groupRegistrationOptions,
@@ -72,34 +73,80 @@ test("patch에 없는 필드는 기존 값을 유지하고 전달된 일반 필�
   assert.equal(merged.fileIds[0], "884685586571263708");
 });
 
-test("등록 가능 옵션만 displayOrder로 정렬하고 모든 값을 true 또는 false로 만든다", () => {
+test("매물등록 허용 코드만 정렬하고 모든 값을 문자열 true 또는 false로 만든다", () => {
   const serverOptions = [
-    { optionCode: "PARKING", optionName: "주차", optionCategory: "BUILDING", registrationEnabled: true, required: true, displayOrder: 20 },
+    { optionCode: "PARKING", optionName: "주차", optionCategory: "BUILDING", registrationEnabled: true, required: false, displayOrder: 20 },
     { optionCode: "HIDDEN", optionName: "숨김", optionCategory: "ETC", registrationEnabled: false, required: false, displayOrder: 1 },
     { optionCode: "ELEVATOR", optionName: "엘리베이터", optionCategory: "BUILDING", registrationEnabled: true, required: false, displayOrder: 10 },
+    { optionCode: "BALCONY", optionName: "베란다", optionCategory: "SPACE", registrationEnabled: true, required: false, displayOrder: 4 },
+    { optionCode: "AIR_CONDITIONER", optionName: "에어컨", optionCategory: "APPLIANCE", registrationEnabled: true, required: false, displayOrder: 2 },
+    { optionCode: "REFRIGERATOR", optionName: "냉장고", optionCategory: "APPLIANCE", registrationEnabled: true, required: false, displayOrder: 3 },
   ];
 
-  const options = buildRegistrationOptions(serverOptions, new Set(["ELEVATOR"]));
+  const options = buildRegistrationOptions(serverOptions, new Set(["AIR_CONDITIONER"]));
 
   assert.deepEqual(options, [
-    { optionCode: "ELEVATOR", optionValue: "true" },
-    { optionCode: "PARKING", optionValue: "false" },
+    { optionCode: "AIR_CONDITIONER", optionValue: "true" },
+    { optionCode: "REFRIGERATOR", optionValue: "false" },
+    { optionCode: "BALCONY", optionValue: "false" },
   ]);
+  assert.equal(options.every((option) => typeof option.optionValue === "string"), true);
 });
 
-test("등록 옵션 화면은 optionCategory별로 묶고 서버 optionName을 유지한다", () => {
+test("등록 옵션 화면은 정해진 카테고리 순서와 한글 표시명으로 묶는다", () => {
   const groups = groupRegistrationOptions([
-    { optionCode: "ELEVATOR", optionName: "엘리베이터", optionCategory: "BUILDING", registrationEnabled: true, displayOrder: 2 },
-    { optionCode: "AIR_CONDITIONER", optionName: "에어컨", optionCategory: "APPLIANCE", registrationEnabled: true, displayOrder: 1 },
-    { optionCode: "PARKING", optionName: "주차", optionCategory: "BUILDING", registrationEnabled: true, displayOrder: 3 },
+    { optionCode: "BALCONY", optionName: "베란다", optionCategory: "STRUCTURE", registrationEnabled: true, displayOrder: 1 },
+    { optionCode: "INTERNET", optionName: "인터넷", optionCategory: "LIVING", registrationEnabled: true, displayOrder: 2 },
+    { optionCode: "LOAN_AVAILABLE", optionName: "대출 가능", optionCategory: "ETC", registrationEnabled: true, displayOrder: 3 },
+    { optionCode: "ENTRANCE_SECURITY", optionName: "현관보안", optionCategory: "SECURITY", registrationEnabled: true, displayOrder: 4 },
+    { optionCode: "BUILT_IN_WARDROBE", optionName: "붙박이장", optionCategory: "FURNITURE", registrationEnabled: true, displayOrder: 5 },
+    { optionCode: "AIR_CONDITIONER", optionName: "에어컨", optionCategory: "APPLIANCE", registrationEnabled: true, displayOrder: 6 },
   ]);
 
   assert.deepEqual(groups.map((group) => ({
     category: group.category,
+    categoryLabel: group.categoryLabel,
     names: group.items.map((item) => item.optionName),
   })), [
-    { category: "APPLIANCE", names: ["에어컨"] },
-    { category: "BUILDING", names: ["엘리베이터", "주차"] },
+    { category: "STRUCTURE", categoryLabel: "구조", names: ["베란다"] },
+    { category: "APPLIANCE", categoryLabel: "가전", names: ["에어컨"] },
+    { category: "FURNITURE", categoryLabel: "가구", names: ["붙박이장"] },
+    { category: "LIVING", categoryLabel: "생활", names: ["인터넷"] },
+    { category: "SECURITY", categoryLabel: "보안", names: ["현관보안"] },
+    { category: "ETC", categoryLabel: "기타", names: ["대출 가능"] },
+  ]);
+});
+
+test("required 옵션은 기존 선택 여부와 관계없이 항상 문자열 true다", () => {
+  const options = buildRegistrationOptions([
+    { optionCode: "INTERNET", registrationEnabled: true, required: true, displayOrder: 1 },
+    { optionCode: "BIDET", registrationEnabled: true, required: false, displayOrder: 2 },
+  ], new Set());
+
+  assert.deepEqual(options, [
+    { optionCode: "INTERNET", optionValue: "true" },
+    { optionCode: "BIDET", optionValue: "false" },
+  ]);
+});
+
+test("기존 저장값에 금지 코드가 섞여 있어도 최종 등록 옵션에서 제거한다", () => {
+  const selected = selectedOptionCodesFromOptions([
+    { optionCode: "AIR_CONDITIONER", optionValue: "true" },
+    { optionCode: "PARKING", optionValue: "true" },
+    { optionCode: "ELEVATOR", optionValue: "true" },
+    { optionCode: "PET_ALLOWED", optionValue: "true" },
+    { optionCode: "VERANDA", optionValue: "true" },
+  ]);
+  const options = buildRegistrationOptions([
+    { optionCode: "AIR_CONDITIONER", registrationEnabled: true, required: false, displayOrder: 1 },
+    { optionCode: "PARKING", registrationEnabled: true, required: false, displayOrder: 2 },
+    { optionCode: "ELEVATOR", registrationEnabled: true, required: false, displayOrder: 3 },
+    { optionCode: "PET_ALLOWED", registrationEnabled: true, required: false, displayOrder: 4 },
+    { optionCode: "VERANDA", registrationEnabled: true, required: false, displayOrder: 5 },
+  ], selected);
+
+  assert.deepEqual(options, [
+    { optionCode: "AIR_CONDITIONER", optionValue: "true" },
   ]);
 });
 
@@ -135,6 +182,39 @@ test("업로드 세션 응답은 문자열 TSID와 요청 순서를 만족해야
   );
 });
 
+test("두 번째 사진을 앞으로 이동하면 화면과 fileIds 순서 모두 대표사진부터 갱신된다", () => {
+  const files = [
+    { fileId: "884685586571263711", name: "첫 번째" },
+    { fileId: "884685586571263712", name: "두 번째" },
+    { fileId: "884685586571263713", name: "세 번째" },
+  ];
+
+  const reordered = propertyFileOrdering.reorderPropertyFiles(files, 1, -1);
+
+  assert.deepEqual(reordered.map((file) => file.name), ["두 번째", "첫 번째", "세 번째"]);
+  assert.deepEqual(reordered.map((file) => file.fileId), [
+    "884685586571263712",
+    "884685586571263711",
+    "884685586571263713",
+  ]);
+  assert.deepEqual(files.map((file) => file.name), ["첫 번째", "두 번째", "세 번째"]);
+});
+
+test("사진 이동 버튼은 첫 사진의 이전과 마지막 사진의 다음만 비활성화한다", () => {
+  assert.deepEqual(propertyFileOrdering.getPropertyFileMoveState(0, 3), {
+    canMoveBackward: false,
+    canMoveForward: true,
+  });
+  assert.deepEqual(propertyFileOrdering.getPropertyFileMoveState(1, 3), {
+    canMoveBackward: true,
+    canMoveForward: true,
+  });
+  assert.deepEqual(propertyFileOrdering.getPropertyFileMoveState(2, 3), {
+    canMoveBackward: true,
+    canMoveForward: false,
+  });
+});
+
 test("Step4 뒤로가기 patch는 fileIds와 options만 복사한다", () => {
   const fileIds = ["884685586571263710"];
   const options = [{ optionCode: "PARKING", optionValue: "true" }];
@@ -167,11 +247,11 @@ test("4단계 이미지 업로드 중에만 공통 뒤로가기를 막는다", (
 
 test("옵션 재조회용 선택 상태는 기존 true 옵션에서 복원한다", () => {
   const selected = selectedOptionCodesFromOptions([
-    { optionCode: "ELEVATOR", optionValue: "true" },
+    { optionCode: "AIR_CONDITIONER", optionValue: "true" },
     { optionCode: "PARKING", optionValue: "false" },
   ]);
 
-  assert.deepEqual([...selected], ["ELEVATOR"]);
+  assert.deepEqual([...selected], ["AIR_CONDITIONER"]);
 });
 
 test("preview 생성 실패는 complete된 파일 결과를 실패시키지 않는다", () => {

@@ -34,8 +34,9 @@ const teammateIntegrationFixture = {
   },
   fileIds: ["884685586571263702", "884685586571263703"],
   options: [
-    { optionCode: "AIR_CONDITIONER", optionValue: "2" },
-    { optionCode: "REFRIGERATOR", optionValue: "1" },
+    { optionCode: "AIR_CONDITIONER", optionValue: true },
+    { optionCode: "REFRIGERATOR", optionValue: "false" },
+    { optionCode: "ELEVATOR", optionValue: "true" },
   ],
 };
 
@@ -257,7 +258,7 @@ test("등록 연동값은 문자열 TSID와 백엔드 주소·파일 계약을 �
   assert.equal(hasPropertyIntegrationData({ ...validDraft, fileIds: [] }), false);
 });
 
-test("팀원 완료값 fixture를 임호탁 등록 요청에 손실 없이 조합한다", () => {
+test("팀원 완료값 fixture를 등록 요청에 조합하며 폐기 옵션을 제거한다", () => {
   const request = createPropertyCreateRequest({
     publisherType: "DIRECT_OWNER",
     propertyType: "APARTMENT",
@@ -286,7 +287,10 @@ test("팀원 완료값 fixture를 임호탁 등록 요청에 손실 없이 조�
   assert.equal(request.regionId, teammateIntegrationFixture.regionId);
   assert.equal(request.apartmentComplexId, teammateIntegrationFixture.apartmentComplexId);
   assert.deepEqual(request.fileIds, teammateIntegrationFixture.fileIds);
-  assert.deepEqual(request.options, teammateIntegrationFixture.options);
+  assert.deepEqual(request.options, [
+    { optionCode: "AIR_CONDITIONER", optionValue: "true" },
+    { optionCode: "REFRIGERATOR", optionValue: "false" },
+  ]);
   assert.deepEqual(request.address, teammateIntegrationFixture.address);
   assert.equal(typeof request.regionId, "string");
   assert.equal(typeof request.fileIds[0], "string");

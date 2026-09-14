@@ -35,3 +35,16 @@ export const createFilePreviewUrl = (file, createObjectUrl = URL.createObjectURL
     return "";
   }
 };
+
+export const getPropertyFileMoveState = (index, length) => ({
+  canMoveBackward: index > 0 && index < length,
+  canMoveForward: index >= 0 && index < length - 1,
+});
+
+export const reorderPropertyFiles = (files, index, offset) => {
+  const reordered = [...files];
+  const target = index + offset;
+  if (target < 0 || target >= reordered.length) return reordered;
+  [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+  return reordered;
+};
