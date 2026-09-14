@@ -13,6 +13,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 const memberStore = useMemberStore();
 const loadError = ref("");
+const isLoggingOut = ref(false);
 
 const member = computed(
   () => memberStore.memberProfile || authStore.userInfo || {},
@@ -42,6 +43,20 @@ const openAgentApplication = () => {
     return;
   }
   router.push("/mypage/agent-application/documents");
+};
+
+const logout = async () => {
+  if (isLoggingOut.value) return;
+
+  isLoggingOut.value = true;
+  try {
+    await authStore.logout();
+  } catch {
+    // 로컬 인증 상태 초기화 유지
+  } finally {
+    memberStore.clearMemberState();
+    router.replace("/sign-in");
+  }
 };
 
 onMounted(loadProfile);
@@ -97,6 +112,15 @@ onMounted(loadProfile);
           </button>
         </template>
       </nav>
+
+      <button
+        type="button"
+        class="my-page__logout"
+        :disabled="isLoggingOut"
+        @click="logout"
+      >
+        {{ isLoggingOut ? "로그아웃 중..." : "로그아웃" }}
+      </button>
     </div>
   </section>
 </template>
@@ -198,5 +222,20 @@ onMounted(loadProfile);
   color: var(--zipda-color-tertiary, #b5c99a);
   font-size: 20px;
   font-style: normal;
+}
+
+.my-page__logout {
+  justify-self: center;
+  padding: 8px 12px;
+  color: var(--zipda-color-tertiary, #b5c99a);
+  font-size: 12px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.my-page__logout:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 </style>

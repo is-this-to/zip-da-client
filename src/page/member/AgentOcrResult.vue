@@ -136,6 +136,7 @@ onMounted(loadApplication);
           />
           <MyInput
             v-model="form.representativeName"
+            placeholder="프로필 이름과 대표자명이 동일해야 합니다."
             label="대표자명"
             maxlength="50"
             required

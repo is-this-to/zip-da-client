@@ -19,6 +19,10 @@ const props = defineProps({
     type: [String, Number],
     default: null,
   },
+  autoScrollSelectedProperty: {
+    type: Boolean,
+    default: false,
+  },
   sort: {
     type: String,
     default: "LATEST",
@@ -206,7 +210,10 @@ watch(
 watch(
   () => props.selectedPropertyId,
   async (propertyId) => {
-    if (propertyId === null) {
+    if (
+      propertyId === null ||
+      !props.autoScrollSelectedProperty
+    ) {
       return;
     }
 
