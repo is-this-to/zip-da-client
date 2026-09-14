@@ -28,10 +28,10 @@
   --zipda-color-subtle-hover: #dde5d4;
   --zipda-color-subtle-background: #efeee9;
 
-  /* Layout: Figma frame width 344px */
-  --zipda-app-width: 344px;
+  /* Layout: 모바일 시안은 344px이지만 넓은 모바일·태블릿까지 유동 확장 */
+  --zipda-app-width: 560px;
   --zipda-page-padding: 20px;
-  --zipda-header-height: 52px;
+  --zipda-header-height: 56px;
   --zipda-bottom-nav-height: 64px;
   --zipda-form-gap: 20px;
   --zipda-section-gap: 32px;
@@ -44,7 +44,15 @@
   --zipda-focus-ring: 0 0 0 3px rgb(113 131 85 / 20%);
 
   /* Common system font */
-  --zipda-font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --zipda-font-family:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "SUIT", sans-serif;
 }
 
 /* ========================================================================== */
@@ -58,6 +66,12 @@
 
 html {
   min-width: 320px;
+  /*
+   * 모바일 반응형 화면에서 지도 bounds 재조회 중 매물 목록이
+   * 로딩 상태로 전환되어도 문서 폭이 달라지지 않게 한다.
+   * 문서 스크롤바 생성·제거로 인한 지도 ResizeObserver 반복을 방지한다.
+   */
+  scrollbar-gutter: stable;
   color: var(--zipda-color-text);
   background: var(--zipda-color-background);
   font-family: var(--zipda-font-family);
@@ -110,7 +124,8 @@ p {
   max-width: var(--zipda-app-width);
   min-height: 100dvh;
   margin: 0 auto;
-  overflow-x: hidden;
+  /* Avoid creating a scroll container that would trap sticky headers. */
+  overflow-x: clip;
   background: var(--zipda-color-white);
   box-shadow: var(--zipda-shadow-app);
 }
@@ -121,7 +136,9 @@ p {
 
 /* Bottom navigation이 보이는 화면은 콘텐츠가 가려지지 않도록 공간을 확보한다. */
 .app-main--with-bottom-nav {
-  padding-bottom: calc(var(--zipda-bottom-nav-height) + env(safe-area-inset-bottom));
+  padding-bottom: calc(
+    var(--zipda-bottom-nav-height) + env(safe-area-inset-bottom)
+  );
 }
 
 /* 화면 전체 */
@@ -150,18 +167,25 @@ p {
   width: 100%;
   height: var(--zipda-header-height);
   padding: 0 8px;
-  background: var(--zipda-color-surface);
-  border-bottom: 1px solid var(--zipda-color-border);
+  background: var(--zipda-color-white);
+  border-bottom: 1px solid #dde5d4;
+  box-shadow: 0 1px 0 rgb(32 33 31 / 2%);
 }
 
 .app-header__title {
   overflow: hidden;
-  color: var(--zipda-color-text);
-  font-size: 15px;
-  font-weight: 700;
+  color: #1b1c19;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.app-header--brand .app-header__title {
+  color: var(--zipda-color-subtle-text);
+  letter-spacing: -0.01em;
 }
 
 .app-header__button {
@@ -243,8 +267,13 @@ p {
   bottom: 0;
   z-index: 20;
   width: 100%;
-  padding: 12px var(--zipda-page-padding) calc(12px + env(safe-area-inset-bottom));
-  background: linear-gradient(to bottom, rgb(255 255 255 / 0%), var(--zipda-color-white) 18%);
+  padding: 12px var(--zipda-page-padding)
+    calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0%),
+    var(--zipda-color-white) 18%
+  );
 }
 
 /* ========================================================================== */
@@ -380,5 +409,38 @@ p {
 
   .app-shell {
     box-shadow: none;
+  }
+}
+
+/* ========================================================================== */
+/* Desktop layout                                                             */
+/* ========================================================================== */
+@media (min-width: 768px) {
+  /*
+   * 모바일·태블릿에서는 최대 560px 앱 프레임을 사용하지만,
+   * 데스크톱에서는 브라우저 전체 너비를 사용한다.
+   */
+  .app-shell {
+    width: 100%;
+    max-width: none;
+    min-height: 100dvh;
+    margin: 0;
+    box-shadow: none;
+  }
+
+  /*
+   * 데스크톱에서는 하단 네비게이션을 표시하지 않으므로
+   * 모바일용 하단 여백을 제거한다.
+   */
+  .app-main--with-bottom-nav {
+    padding-bottom: 0;
+  }
+
+  /*
+   * 모바일 하단 네비게이션은 데스크톱에서 숨긴다.
+   * 데스크톱 전용 헤더·사이드 메뉴는 추후 별도로 구성한다.
+   */
+  .bottom-nav {
+    display: none;
   }
 }
