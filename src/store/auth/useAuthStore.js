@@ -37,6 +37,14 @@ export const useAuthStore = defineStore("authStore", () => {
     setAuthentication(res.data.data);
   };
 
+  const requestPasswordReset = async (email) => {
+    await myAxios.post("/api/member/auth/password-reset-requests", { email });
+  };
+
+  const resetPassword = async (passwordResetForm) => {
+    await myAxios.post("/api/member/auth/password-resets", passwordResetForm);
+  };
+
   const performReissue = async () => {
     try {
       const res = await myAxios.post("/api/member/auth/token-refreshes");
@@ -130,6 +138,8 @@ export const useAuthStore = defineStore("authStore", () => {
     role,
     clearAuthStore,
     login,
+    requestPasswordReset,
+    resetPassword,
     reissue,
     logout,
     getTerms,

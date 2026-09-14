@@ -14,6 +14,7 @@ import MemberProfileEdit from "../page/member/MemberProfileEdit.vue";
 import MemberPasswordChange from "../page/member/MemberPasswordChange.vue";
 import AgentProfileEdit from "../page/agent/AgentProfileEdit.vue";
 import AgentProfileDetail from "../page/agent/AgentProfileDetail.vue";
+import PasswordReset from "../page/auth/PasswordReset.vue";
 
 // 팀원 각자파트 권한을 나눠서 routes 컴포넌트 경로 적어주세요
 const setMeta = (
@@ -62,21 +63,6 @@ const routes = [
     meta: setMeta(false, true),
   },
   {
-    path: "/oauth2/callback",
-    component: OAuth2Callback,
-    meta: setMeta(false, true),
-  },
-  {
-    path: "/social-sign-up",
-    component: SocialSignUp,
-    meta: setMeta(false, true),
-  },
-  {
-    path: "/social-account-link",
-    component: SocialAccountLink,
-    meta: setMeta(false, true),
-  },
-  {
     path: "/mypage",
     alias: "/members/me",
     component: MyPage,
@@ -114,7 +100,7 @@ const routes = [
   },
   {
     path: "/password-reset",
-    component: "",
+    component: PasswordReset,
     meta: setMeta(false, true),
   },
   {

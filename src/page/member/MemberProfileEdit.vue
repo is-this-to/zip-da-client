@@ -5,6 +5,7 @@ import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
 import ProfileImagePicker from "../../component/input/ProfileImagePicker.vue";
+import memberMessage from "../../constants/memberMessage.js";
 import { useMemberStore } from "../../store/member/member.js";
 
 const router = useRouter();
@@ -32,9 +33,8 @@ const applyProfile = (data) => {
 const loadProfile = async () => {
   try {
     applyProfile(await memberStore.getMyProfile());
-  } catch (error) {
-    errorMessage.value =
-      error?.response?.data?.message || "프로필 정보를 불러오지 못했습니다.";
+  } catch {
+    errorMessage.value = memberMessage.getMemberMessage("PROFILE_LOAD_ERROR");
   }
 };
 
@@ -51,7 +51,9 @@ const saveProfile = async () => {
     let profileFileId;
     let profileImageAction = "KEEP";
     if (selectedFile.value) {
-      const uploaded = await memberStore.uploadMyProfileImage(selectedFile.value);
+      const uploaded = await memberStore.uploadMyProfileImage(
+        selectedFile.value,
+      );
       profileFileId = String(uploaded.fileId);
       profileImageAction = "REPLACE";
     } else if (removeImage.value) {
@@ -68,9 +70,8 @@ const saveProfile = async () => {
     removeImage.value = false;
     applyProfile(updated);
     successMessage.value = "프로필이 변경되었습니다.";
-  } catch (error) {
-    errorMessage.value =
-      error?.response?.data?.message || "프로필을 저장하지 못했습니다.";
+  } catch {
+    errorMessage.value = memberMessage.getMemberMessage("PROFILE_SAVE_ERROR");
   }
 };
 
@@ -111,14 +112,18 @@ onMounted(loadProfile);
           required
           placeholder="01012345678"
           :error-message="
-            form.phone && !validPhone ? '휴대폰 번호를 숫자만 입력해 주세요.' : ''
+            form.phone && !validPhone
+              ? '휴대폰 번호를 숫자만 입력해 주세요.'
+              : ''
           "
           helper-text="현재는 별도 휴대폰 인증 없이 변경됩니다."
         />
       </section>
 
       <p v-if="errorMessage" class="error-box">{{ errorMessage }}</p>
-      <p v-if="successMessage" class="info-box" role="status">{{ successMessage }}</p>
+      <p v-if="successMessage" class="info-box" role="status">
+        {{ successMessage }}
+      </p>
 
       <div class="form-actions">
         <MyButton
@@ -144,5 +149,7 @@ onMounted(loadProfile);
   padding-top: 38px;
 }
 
-.form-actions { margin-top: 16px; }
+.form-actions {
+  margin-top: 16px;
+}
 </style>

@@ -1,6 +1,6 @@
 <script setup>
 import { reactive, ref } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import signInValidator from "../../util/validator/member/signInValidator.js";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 import { useMyErrorStore } from "../../store/error/useMyErrorStore.js";
@@ -9,8 +9,10 @@ import Header from "../../component/Header.vue";
 import ActionLink from "../../component/button/ActionLink.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
+import memberMessage from "../../constants/memberMessage.js";
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 const myErrorStore = useMyErrorStore();
 
@@ -37,7 +39,7 @@ const submitLogin = async () => {
       router.replace("/main");
     } catch (error) {
       if (myErrorStore.redirectErrorPage(error)) return;
-      errorMessage.value = "이메일 또는 비밀번호를 확인해 주세요.";
+      errorMessage.value = memberMessage.getMemberMessage("LOGIN_ERROR");
     } finally {
       isSubmitting.value = false;
     }
@@ -69,6 +71,14 @@ const startKakaoLogin = () => {
         <h1 class="page-title">로그인</h1>
         <p class="page-description">다시 만나서 반가워요!</p>
       </header>
+
+      <p
+        v-if="route.query.passwordReset === 'true'"
+        class="info-box sign-in-success"
+        role="status"
+      >
+        비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.
+      </p>
 
       <form class="form sign-in-form" @submit.prevent="submitLogin">
         <div class="field-group sign-in-fields">
@@ -183,6 +193,10 @@ const startKakaoLogin = () => {
 .sign-in-form {
   gap: 0;
   margin-top: 32px;
+}
+
+.sign-in-success {
+  margin-top: 24px;
 }
 
 .sign-in-fields {

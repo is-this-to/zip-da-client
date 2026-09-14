@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
+import memberMessage from "../../constants/memberMessage.js";
 import { useMemberStore } from "../../store/member/member.js";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -55,13 +56,6 @@ const canContinue = computed(
       (document) => document.file || hasCompletedDocument(document.type),
     ),
 );
-
-const readError = (error, fallback) => {
-  const responseData = error?.response?.data;
-  if (typeof responseData?.message === "string") return responseData.message;
-  if (typeof responseData?.data === "string") return responseData.data;
-  return fallback;
-};
 
 const releasePreview = (document) => {
   if (document.previewUrl) {
@@ -119,10 +113,9 @@ const loadApplication = async () => {
   try {
     pageError.value = "";
     await memberStore.initializeAgentApplication();
-  } catch (error) {
-    pageError.value = readError(
-      error,
-      "중개사 전환 신청 정보를 불러오지 못했습니다.",
+  } catch {
+    pageError.value = memberMessage.getMemberMessage(
+      "AGENT_APPLICATION_LOAD_ERROR",
     );
   }
 };
@@ -144,9 +137,9 @@ const uploadDocuments = async () => {
       );
 
       if (result.ocrStatus !== "COMPLETED") {
-        document.error =
-          result.failureReason ||
-          "문서 내용을 읽지 못했습니다. 더 선명한 서류로 다시 시도해 주세요.";
+        document.error = memberMessage.getMemberMessage(
+          "AGENT_DOCUMENT_READ_ERROR",
+        );
         return;
       }
 
@@ -155,10 +148,9 @@ const uploadDocuments = async () => {
 
     await memberStore.getCurrentAgentApplication();
     await router.push("/mypage/agent-application/ocr");
-  } catch (error) {
-    pageError.value = readError(
-      error,
-      "서류 업로드 또는 OCR 처리에 실패했습니다.",
+  } catch {
+    pageError.value = memberMessage.getMemberMessage(
+      "AGENT_DOCUMENT_UPLOAD_ERROR",
     );
   } finally {
     uploading.value = false;

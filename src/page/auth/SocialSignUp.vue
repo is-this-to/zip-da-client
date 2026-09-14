@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
+import memberMessage from "../../constants/memberMessage.js";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 
 const router = useRouter();
@@ -42,9 +43,6 @@ const formReady = computed(
     /^01[016789]\d{7,8}$/.test(normalizedPhone.value),
 );
 
-const readError = (error, fallback) =>
-  error?.response?.data?.message || error?.response?.data?.data || fallback;
-
 const loadPage = async () => {
   try {
     const [signupContext, activeTerms] = await Promise.all([
@@ -57,10 +55,9 @@ const loadPage = async () => {
     activeTerms.forEach((term) => {
       agreed[term.termId] = false;
     });
-  } catch (error) {
-    pageError.value = readError(
-      error,
-      "카카오 회원가입 정보를 불러오지 못했습니다. 다시 로그인해 주세요.",
+  } catch {
+    pageError.value = memberMessage.getMemberMessage(
+      "SOCIAL_CONTEXT_ERROR",
     );
   } finally {
     loading.value = false;
@@ -95,10 +92,9 @@ const checkNickname = async () => {
     nicknameCheck.message = result.available
       ? "사용할 수 있는 닉네임입니다."
       : "이미 사용 중인 닉네임입니다.";
-  } catch (error) {
-    nicknameCheck.message = readError(
-      error,
-      "닉네임 중복 확인에 실패했습니다.",
+  } catch {
+    nicknameCheck.message = memberMessage.getMemberMessage(
+      "NICKNAME_CHECK_ERROR",
     );
   } finally {
     checkingNickname.value = false;
@@ -126,8 +122,8 @@ const submitSignup = async () => {
     const success = await authStore.reissue();
     if (!success) throw new Error("가입 후 토큰 발급 실패");
     await router.replace("/main");
-  } catch (error) {
-    formError.value = readError(error, "카카오 회원가입에 실패했습니다.");
+  } catch {
+    formError.value = memberMessage.getMemberMessage("SOCIAL_SIGN_UP_ERROR");
   } finally {
     submitting.value = false;
   }
@@ -494,7 +490,7 @@ onMounted(loadPage);
 }
 
 .modal {
-  width: min(100%, 344px);
+  width: min(100%, 520px);
   max-height: 70dvh;
   padding: 20px;
   overflow: auto;
