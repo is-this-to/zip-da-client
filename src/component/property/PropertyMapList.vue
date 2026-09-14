@@ -19,6 +19,10 @@ const props = defineProps({
     type: [String, Number],
     default: null,
   },
+  autoScrollSelectedProperty: {
+    type: Boolean,
+    default: false,
+  },
   sort: {
     type: String,
     default: "LATEST",
@@ -51,6 +55,7 @@ const emit = defineEmits([
 const listContainer = ref(null);
 const loadMoreSentinel = ref(null);
 const cardElements = new Map();
+const failedImageKeys = ref(new Set());
 
 let intersectionObserver = null;
 let viewportMediaQuery = null;
@@ -65,6 +70,63 @@ const propertyTypeLabel = (propertyType) => {
   };
 
   return labels[propertyType] ?? propertyType;
+};
+
+const normalizeRepresentativeImageUrl = (item) => {
+  return typeof item?.representativeImageUrl === "string"
+    ? item.representativeImageUrl.trim()
+    : "";
+};
+
+const createRepresentativeImageKey = (item) => {
+  return [
+    String(item?.propertyId ?? ""),
+    normalizeRepresentativeImageUrl(item),
+  ].join(":");
+};
+
+const hasRepresentativeImage = (item) => {
+  const imageUrl = normalizeRepresentativeImageUrl(item);
+
+  return (
+    imageUrl.length > 0 &&
+    !failedImageKeys.value.has(createRepresentativeImageKey(item))
+  );
+};
+
+const handleRepresentativeImageError = (item) => {
+  const imageUrl = normalizeRepresentativeImageUrl(item);
+
+  if (!imageUrl) {
+    return;
+  }
+
+  const nextFailedImageKeys = new Set(failedImageKeys.value);
+  nextFailedImageKeys.add(createRepresentativeImageKey(item));
+  failedImageKeys.value = nextFailedImageKeys;
+};
+
+const getRepresentativeImageAlt = (item) => {
+  const title =
+    typeof item?.title === "string" && item.title.trim()
+      ? item.title.trim()
+      : item?.publicAddress || "매물";
+
+  return `${title} 대표 이미지`;
+};
+
+const pruneFailedImageKeys = () => {
+  const activeImageKeys = new Set(
+    props.items
+      .filter((item) => normalizeRepresentativeImageUrl(item))
+      .map(createRepresentativeImageKey),
+  );
+
+  failedImageKeys.value = new Set(
+    [...failedImageKeys.value].filter((key) =>
+      activeImageKeys.has(key),
+    ),
+  );
 };
 
 const setCardElement = (element, propertyId) => {
@@ -148,7 +210,10 @@ watch(
 watch(
   () => props.selectedPropertyId,
   async (propertyId) => {
-    if (propertyId === null) {
+    if (
+      propertyId === null ||
+      !props.autoScrollSelectedProperty
+    ) {
       return;
     }
 
@@ -160,6 +225,12 @@ watch(
       inline: "nearest",
     });
   },
+);
+
+watch(
+  () => props.items,
+  pruneFailedImageKeys,
+  { flush: "post" },
 );
 
 onMounted(() => {
@@ -182,6 +253,7 @@ onBeforeUnmount(() => {
   );
   viewportMediaQuery = null;
   cardElements.clear();
+  failedImageKeys.value = new Set();
 });
 </script>
 
@@ -257,21 +329,44 @@ onBeforeUnmount(() => {
           }"
           @click="emit('select-property', item)"
         >
-          <span class="property-map-card__type">
-            {{ propertyTypeLabel(item.propertyType) }}
-          </span>
+          <div class="property-map-card__media">
+            <img
+              v-if="hasRepresentativeImage(item)"
+              class="property-map-card__image"
+              :src="normalizeRepresentativeImageUrl(item)"
+              :alt="getRepresentativeImageAlt(item)"
+              loading="lazy"
+              decoding="async"
+              @error="handleRepresentativeImageError(item)"
+            >
 
-          <strong class="property-map-card__price">
-            {{ formatPropertyPrice(item) }}
-          </strong>
+            <div
+              v-else
+              class="property-map-card__image-placeholder"
+              role="img"
+              aria-label="대표 이미지 없음"
+            >
+              <span>이미지 없음</span>
+            </div>
+          </div>
 
-          <span class="property-map-card__title">
-            {{ item.title }}
-          </span>
+          <div class="property-map-card__content">
+            <span class="property-map-card__type">
+              {{ propertyTypeLabel(item.propertyType) }}
+            </span>
 
-          <span class="property-map-card__address">
-            {{ item.publicAddress }}
-          </span>
+            <strong class="property-map-card__price">
+              {{ formatPropertyPrice(item) }}
+            </strong>
+
+            <span class="property-map-card__title">
+              {{ item.title }}
+            </span>
+
+            <span class="property-map-card__address">
+              {{ item.publicAddress }}
+            </span>
+          </div>
         </button>
 
         <div
@@ -372,9 +467,14 @@ onBeforeUnmount(() => {
 
 .property-map-card {
   width: 100%;
+  min-height: 118px;
   display: grid;
-  gap: 5px;
-  padding: 14px;
+  grid-template-columns:
+    clamp(96px, 30%, 128px)
+    minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
   overflow: hidden;
   color: var(--zipda-color-text);
   background: var(--zipda-color-white);
@@ -389,6 +489,45 @@ onBeforeUnmount(() => {
   border-color: var(--zipda-color-primary);
 }
 
+.property-map-card__media {
+  min-width: 0;
+  min-height: 114px;
+  overflow: hidden;
+  background: #f4f4ef;
+}
+
+.property-map-card__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.property-map-card__image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  color: var(--zipda-color-primary-active);
+  background:
+    linear-gradient(
+      135deg,
+      #f4f4ef,
+      #e9f5db
+    );
+  font-size: 11px;
+  text-align: center;
+}
+
+.property-map-card__content {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 14px;
+}
+
 .property-map-card__type {
   color: var(--zipda-color-primary-active);
   font-size: 11px;
@@ -396,7 +535,10 @@ onBeforeUnmount(() => {
 }
 
 .property-map-card__price {
+  overflow: hidden;
   font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .property-map-card__title,

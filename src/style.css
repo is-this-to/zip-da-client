@@ -31,7 +31,7 @@
   /* Layout: 모바일 시안은 344px이지만 넓은 모바일·태블릿까지 유동 확장 */
   --zipda-app-width: 560px;
   --zipda-page-padding: 20px;
-  --zipda-header-height: 52px;
+  --zipda-header-height: 56px;
   --zipda-bottom-nav-height: 64px;
   --zipda-form-gap: 20px;
   --zipda-section-gap: 32px;
@@ -66,6 +66,12 @@
 
 html {
   min-width: 320px;
+  /*
+   * 모바일 반응형 화면에서 지도 bounds 재조회 중 매물 목록이
+   * 로딩 상태로 전환되어도 문서 폭이 달라지지 않게 한다.
+   * 문서 스크롤바 생성·제거로 인한 지도 ResizeObserver 반복을 방지한다.
+   */
+  scrollbar-gutter: stable;
   color: var(--zipda-color-text);
   background: var(--zipda-color-background);
   font-family: var(--zipda-font-family);
@@ -118,7 +124,8 @@ p {
   max-width: var(--zipda-app-width);
   min-height: 100dvh;
   margin: 0 auto;
-  overflow-x: hidden;
+  /* Avoid creating a scroll container that would trap sticky headers. */
+  overflow-x: clip;
   background: var(--zipda-color-white);
   box-shadow: var(--zipda-shadow-app);
 }
@@ -160,18 +167,25 @@ p {
   width: 100%;
   height: var(--zipda-header-height);
   padding: 0 8px;
-  background: var(--zipda-color-surface);
-  border-bottom: 1px solid var(--zipda-color-border);
+  background: var(--zipda-color-white);
+  border-bottom: 1px solid #dde5d4;
+  box-shadow: 0 1px 0 rgb(32 33 31 / 2%);
 }
 
 .app-header__title {
   overflow: hidden;
-  color: var(--zipda-color-text);
-  font-size: 15px;
-  font-weight: 700;
+  color: #1b1c19;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.app-header--brand .app-header__title {
+  color: var(--zipda-color-subtle-text);
+  letter-spacing: -0.01em;
 }
 
 .app-header__button {

@@ -48,6 +48,11 @@ const routes = [
     meta: setMeta(false, false, [], true),
   },
   {
+    path: "/properties",
+    component: () => import("../page/property/PropertyMapPage.vue"),
+    meta: setMeta(false, false, [], true),
+  },
+  {
     path: "/properties/:propertyId",
     component: () => import("../page/property/PropertyDetailPage.vue"),
     meta: setMeta(false, false),

@@ -94,7 +94,6 @@ onMounted(async () => {
 <template>
   <section class="page favorite-page">
     <Header
-      class="favorite-page__header"
       :title="favoriteTitle"
       show-back
     />
@@ -194,39 +193,30 @@ onMounted(async () => {
 <style scoped>
 .favorite-page {
   width: 100%;
-  max-width: 344px;
   min-height: 100dvh;
-  margin: 0 auto;
   background: #ffffff;
-}
-
-.favorite-page :deep(.favorite-page__header) {
-  height: 56px;
-  background: #ffffff;
-  border-bottom-color: #dde5d4;
-}
-
-.favorite-page :deep(
-  .favorite-page__header .app-header__title
-) {
-  color: #516237;
-  font-size: 18px;
-  line-height: 24px;
-  text-align: left;
 }
 
 .favorite-page__content {
   display: grid;
-  gap: 24px;
+  gap: 28px;
   width: 100%;
-  padding: 24px 16px 32px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 22px 20px 40px;
 }
 
+/* 찜 유형 필터 */
 .favorite-filter {
   display: flex;
   gap: 8px;
-  width: 100%;
-  padding-bottom: 8px;
+
+  /* 버튼 개수만큼만 너비를 사용하고 가운데 배치 */
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
+
+  padding: 0 2px 8px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -237,24 +227,32 @@ onMounted(async () => {
 
 .favorite-filter__chip {
   flex: 0 0 auto;
-  min-height: 31px;
+  min-width: 58px;
+  min-height: 32px;
   padding: 7px 16px;
+
   color: #1b1c19;
   background: #e9f5db;
   border: 1px solid #dde5d4;
   border-radius: 9999px;
+
   font-size: 12px;
   font-weight: 500;
   line-height: 16px;
   letter-spacing: 0.02em;
+
   cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .favorite-filter__chip--active {
   color: #ffffff;
   background: #516237;
   border-color: #516237;
-  box-shadow: 0 1px 1px rgb(0 0 0 / 5%);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
 }
 
 .favorite-list {
@@ -264,7 +262,7 @@ onMounted(async () => {
 }
 
 .favorite-state {
-  padding: 72px 16px;
+  padding: 68px 16px;
   color: #75786d;
   font-size: 14px;
   line-height: 22px;
@@ -278,10 +276,12 @@ onMounted(async () => {
 .favorite-more-button {
   width: 100%;
   min-height: 44px;
+
   color: #516237;
   background: #e9f5db;
   border: 1px solid #dde5d4;
   border-radius: 9999px;
+
   font-weight: 700;
   cursor: pointer;
 }

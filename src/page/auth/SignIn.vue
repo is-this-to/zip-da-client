@@ -255,20 +255,6 @@ const startKakaoLogin = () => {
   line-height: 24px;
 }
 
-:deep(.app-header) {
-  height: 56px;
-  padding: 0 16px;
-  background: #faf9f4;
-  border-bottom-color: #dde5d4;
-}
-
-:deep(.app-header__title) {
-  color: var(--zipda-color-subtle-text);
-  font-size: 28px;
-  line-height: 34px;
-  letter-spacing: -0.01em;
-}
-
 :deep(.my-input__control) {
   min-height: 50px;
   padding: 0 17px;
