@@ -410,7 +410,7 @@ const handleLevelChange = (level) => {
 /**
  * 지도 이동 또는 확대가 끝난 뒤 현재 화면의 공개 매물을 조회한다.
  */
-const handleMapBoundsChange = (viewport) => {
+const handleMapBoundsChange = (viewport, context = {}) => {
   mapLevel.value = viewport.zoomLevel;
 
   clearTimeout(mapPropertyRequestTimer);
@@ -426,7 +426,10 @@ const handleMapBoundsChange = (viewport) => {
       const filters = propertyMapStore.appliedFilters;
 
       const mapRequest = propertyMapStore
-        .getMapProperties(viewport)
+        .getMapProperties(viewport, {
+          preserveSelectedProperty:
+            context.reason === "property-focus",
+        })
         .catch(handleMapPropertyError);
 
       const listRequest = propertyListStore
@@ -489,11 +492,11 @@ const handleRegionAggregateSelect = async (region) => {
 };
 
 const handleMapPropertySelect = (property) => {
-  propertyMapStore.selectProperty(property.propertyId);
+  propertyMapStore.selectProperty(property);
 };
 
 const handlePropertyCardSelect = (property) => {
-  propertyMapStore.selectProperty(property.propertyId);
+  propertyMapStore.selectProperty(property);
   kakaoMapRef.value?.focusProperty(property);
 };
 
@@ -708,6 +711,7 @@ onBeforeUnmount(() => {
         :map-items="propertyMapStore.truncated ? [] : propertyMapStore.items"
         :truncated="propertyMapStore.truncated"
         :selected-property-id="propertyMapStore.selectedPropertyId"
+        :selected-property="propertyMapStore.selectedProperty"
         @ready="handleMapReady"
         @level-change="handleLevelChange"
         @bounds-change="handleMapBoundsChange"
