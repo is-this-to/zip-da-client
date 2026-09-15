@@ -48,9 +48,6 @@ const form = ref({
   direction: "",
   approvalDate: "",
   buildingUse: "",
-  isParkingAvailable: false,
-  hasElevator: false,
-  isPetAllowed: false,
   title: "",
   description: "",
 });
@@ -250,6 +247,7 @@ onMounted(async () => {
           v-model="form"
           :errors="errors"
           :disabled="store.isActionLoading"
+          :show-living-conditions="false"
           publisher-locked
         />
 
