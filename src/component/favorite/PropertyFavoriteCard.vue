@@ -1,8 +1,10 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import FavoriteButton from './FavoriteButton.vue'
 import { formatPropertyPrice } from '../../util/property/formatPropertyPrice.js'
+import { toPropertyDetailLocation } from '../../route/propertyDetailLocation.js'
 
 const props = defineProps({
   item: {
@@ -15,7 +17,22 @@ const emit = defineEmits([
   'favorite-change',
 ])
 
+const router = useRouter()
 const imageFailed = ref(false)
+
+/**
+ * 찜 목록의 매물 카드를 누르면
+ * 해당 매물의 공개 상세 페이지로 이동한다.
+ */
+const openPropertyDetail = () => {
+  if (props.item?.propertyId == null) {
+    return
+  }
+
+  router.push(
+    toPropertyDetailLocation(props.item),
+  )
+}
 
 const propertyTypeLabel = computed(() => {
   const labels = {
@@ -80,7 +97,14 @@ const handleImageError = () => {
 </script>
 
 <template>
-  <article class="favorite-card">
+  <article
+    class="favorite-card"
+    role="link"
+    tabindex="0"
+    @click="openPropertyDetail"
+    @keydown.enter.self.prevent="openPropertyDetail"
+    @keydown.space.self.prevent="openPropertyDetail"
+  >
     <div class="favorite-card__media">
       <img
         v-if="hasImage"
@@ -98,7 +122,14 @@ const handleImageError = () => {
         <span>이미지 없음</span>
       </div>
 
-      <div class="favorite-card__heart">
+      <!--
+        하트를 눌렀을 때는
+        카드의 상세페이지 이동 이벤트가 실행되지 않도록 stop
+      -->
+      <div
+        class="favorite-card__heart"
+        @click.stop
+      >
         <FavoriteButton
           :property-id="item.propertyId"
           :initial-favorite="item.isFavorite"
@@ -130,6 +161,12 @@ const handleImageError = () => {
   overflow: hidden;
   background: #ffffff;
   border-radius: 20px;
+  cursor: pointer;
+}
+
+.favorite-card:focus-visible {
+  outline: none;
+  box-shadow: var(--zipda-focus-ring);
 }
 
 .favorite-card__media {
