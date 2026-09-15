@@ -47,6 +47,32 @@ const routes = [
     component: () => import("../page/property/PropertyMapPage.vue"),
     meta: setMeta(false, false, [], true),
   },
+  // 임호탁 파트 (매물 등록·내 매물 관리 라우트)
+  {
+    path: "/my-properties",
+    name: "my-properties",
+    component: () => import("../page/property/MyPropertiesPage.vue"),
+    meta: setMeta(true, false, ["USER", "AGENT"], true),
+  },
+  {
+    path: "/properties/new",
+    name: "property-create",
+    component: () => import("../page/property/PropertyCreatePage.vue"),
+    meta: setMeta(true, false, ["USER", "AGENT"]),
+  },
+  {
+    path: "/properties/:propertyId/edit",
+    name: "property-edit",
+    component: () => import("../page/property/PropertyEditPage.vue"),
+    meta: setMeta(true, false, ["USER", "AGENT", "CS_ADMIN", "SUPER_ADMIN"]),
+  },
+  {
+    path: "/properties/:propertyId/verification/:mode(owner|tenant|reverification)",
+    name: "property-verification",
+    component: () => import("../page/property/PropertyVerificationPage.vue"),
+    meta: setMeta(true, false, ["USER", "AGENT"]),
+  },
+  // 임호탁 파트 끝
   {
     path: "/properties",
     component: () => import("../page/property/PropertyMapPage.vue"),
