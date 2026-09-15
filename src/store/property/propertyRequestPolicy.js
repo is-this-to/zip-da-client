@@ -1,4 +1,5 @@
 import { sanitizeRegistrationOptions } from "../../api/propertyOptionPolicy.js";
+import { resolveVerificationEvidenceType } from "../../constant/property/propertyStatus.js";
 
 // 임호탁 파트 (매물 API 경로·TSID·cursor·If-Match·멱등성 요청 정책)
 export const normalizePropertyId = (value) => {
@@ -7,6 +8,16 @@ export const normalizePropertyId = (value) => {
     throw new TypeError("TSID는 숫자로 변환하지 않은 문자열이어야 합니다.");
   }
   return value;
+};
+
+export const createVerificationEvidence = (fileIds, mode, publisherType) => {
+  const evidenceType = resolveVerificationEvidenceType(mode, publisherType);
+  if (!evidenceType) return [];
+  return fileIds.map((propertyFileId, sortOrder) => ({
+    propertyFileId: normalizePropertyId(propertyFileId),
+    evidenceType,
+    sortOrder,
+  }));
 };
 
 export const createIfMatch = (version) => `"${version}"`;
