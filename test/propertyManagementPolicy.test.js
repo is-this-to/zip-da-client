@@ -290,6 +290,7 @@ test("팀원 완료값 fixture를 등록 요청에 조합하며 폐기 옵션을
   assert.deepEqual(request.options, [
     { optionCode: "AIR_CONDITIONER", optionValue: "true" },
     { optionCode: "REFRIGERATOR", optionValue: "false" },
+    { optionCode: "ELEVATOR", optionValue: "true" },
   ]);
   assert.deepEqual(request.address, teammateIntegrationFixture.address);
   assert.equal(typeof request.regionId, "string");

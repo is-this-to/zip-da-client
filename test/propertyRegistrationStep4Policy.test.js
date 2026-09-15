@@ -89,6 +89,7 @@ test("매물등록 허용 코드만 정렬하고 모든 값을 문자열 true �
     { optionCode: "AIR_CONDITIONER", optionValue: "true" },
     { optionCode: "REFRIGERATOR", optionValue: "false" },
     { optionCode: "BALCONY", optionValue: "false" },
+    { optionCode: "ELEVATOR", optionValue: "false" },
   ]);
   assert.equal(options.every((option) => typeof option.optionValue === "string"), true);
 });
@@ -147,6 +148,8 @@ test("기존 저장값에 금지 코드가 섞여 있어도 최종 등록 옵션
 
   assert.deepEqual(options, [
     { optionCode: "AIR_CONDITIONER", optionValue: "true" },
+    { optionCode: "ELEVATOR", optionValue: "true" },
+    { optionCode: "PET_ALLOWED", optionValue: "true" },
   ]);
 });
 
@@ -260,4 +263,63 @@ test("preview 생성 실패는 complete된 파일 결과를 실패시키지 않�
   });
 
   assert.equal(previewUrl, "");
+});
+
+test("최종 매물등록 옵션은 허용된 15개 코드만 포함하고 신규 허용 코드를 전송한다", () => {
+  const finalRegistrationOptionCodes = [
+    "AIR_CONDITIONER",
+    "REFRIGERATOR",
+    "WASHING_MACHINE",
+    "GAS_RANGE",
+    "MICROWAVE",
+    "BUILT_IN_WARDROBE",
+    "SHOE_CABINET",
+    "BALCONY",
+    "ENTRANCE_SECURITY",
+    "INTERNET",
+    "BIDET",
+    "PARKING_AVAILABLE",
+    "ELEVATOR",
+    "PET_ALLOWED",
+    "LOAN_AVAILABLE",
+  ];
+  const serverOptionCodes = [
+    ...finalRegistrationOptionCodes,
+    "INDUCTION",
+    "TV",
+    "BED",
+  ];
+
+  const options = buildRegistrationOptions(
+    serverOptionCodes.map((optionCode, index) => ({
+      optionCode,
+      optionName: optionCode,
+      optionCategory: "LIVING",
+      registrationEnabled: true,
+      required: false,
+      displayOrder: index + 1,
+    })),
+    new Set(["PARKING_AVAILABLE", "ELEVATOR", "PET_ALLOWED"]),
+  );
+
+  assert.deepEqual(
+    options.map((option) => option.optionCode),
+    finalRegistrationOptionCodes,
+  );
+  assert.deepEqual(
+    options
+      .filter((option) =>
+        ["PARKING_AVAILABLE", "ELEVATOR", "PET_ALLOWED"].includes(option.optionCode),
+      )
+      .map((option) => [option.optionCode, option.optionValue]),
+    [
+      ["PARKING_AVAILABLE", "true"],
+      ["ELEVATOR", "true"],
+      ["PET_ALLOWED", "true"],
+    ],
+  );
+  assert.equal(
+    options.some((option) => ["INDUCTION", "TV", "BED"].includes(option.optionCode)),
+    false,
+  );
 });
