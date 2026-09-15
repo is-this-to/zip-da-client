@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import ProfileImagePicker from "../../component/input/ProfileImagePicker.vue";
+import HeartIcon from "../../component/icon/HeartIcon.vue";
 import memberMessage from "../../constants/memberMessage.js";
 import memberRoleCode from "../../constants/memberRoleCode.js";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
@@ -96,6 +97,27 @@ onMounted(loadProfile);
         <i aria-hidden="true">›</i>
       </button>
 
+      <div class="my-shortcuts" aria-label="바로가기">
+        <div class="my-shortcuts__item">
+          <HeartIcon />
+          <span>찜 목록</span>
+        </div>
+        <div class="my-shortcuts__item">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M3 11 12 4l9 7v9H3v-9Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M9 20v-6h6v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>매물 등록</span>
+        </div>
+        <div class="my-shortcuts__item">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7" />
+            <path d="M12 11v5M12 8h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          </svg>
+          <span>신고 내역</span>
+        </div>
+      </div>
+
       <nav class="my-menu" aria-label="내 정보 메뉴">
         <button type="button" @click="router.push('/mypage/profile')">
           <span aria-hidden="true">♙</span><strong>프로필 수정</strong><i>›</i>
@@ -103,6 +125,9 @@ onMounted(loadProfile);
         <button type="button" @click="router.push('/mypage/password')">
           <span aria-hidden="true">▣</span><strong>비밀번호 변경</strong><i>›</i>
         </button>
+        <div class="my-menu__row">
+          <span aria-hidden="true">⌂</span><strong>내가 올린 매물</strong><i>›</i>
+        </div>
         <template v-if="isAgent && agentId">
           <button type="button" @click="router.push('/mypage/agent-profile')">
             <span aria-hidden="true">⌂</span><strong>중개사 프로필 수정</strong><i>›</i>
@@ -192,6 +217,28 @@ onMounted(loadProfile);
   font-style: normal;
 }
 
+.my-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 16px 8px;
+  background: var(--zipda-color-white);
+  border: 1px solid #eceee9;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgb(32 33 31 / 5%);
+}
+
+.my-shortcuts__item {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  min-height: 54px;
+  color: var(--zipda-color-primary);
+}
+
+.my-shortcuts__item svg { width: 22px; height: 22px; }
+.my-shortcuts__item span { color: var(--zipda-color-text); font-size: 12px; text-align: center; }
+
 .my-menu {
   display: grid;
   padding: 4px 0;
@@ -201,7 +248,8 @@ onMounted(loadProfile);
   box-shadow: 0 8px 24px rgb(32 33 31 / 5%);
 }
 
-.my-menu button {
+.my-menu button,
+.my-menu__row {
   display: grid;
   grid-template-columns: 28px 1fr auto;
   align-items: center;
@@ -215,10 +263,15 @@ onMounted(loadProfile);
   cursor: pointer;
 }
 
-.my-menu button:last-child { border-bottom: 0; }
-.my-menu button span { color: var(--zipda-color-primary); font-size: 18px; }
-.my-menu button strong { font-size: 14px; }
-.my-menu button i {
+.my-menu button:last-child,
+.my-menu__row:last-child { border-bottom: 0; }
+.my-menu__row { cursor: default; }
+.my-menu button span,
+.my-menu__row span { color: var(--zipda-color-primary); font-size: 18px; }
+.my-menu button strong,
+.my-menu__row strong { font-size: 14px; }
+.my-menu button i,
+.my-menu__row i {
   color: var(--zipda-color-tertiary, #b5c99a);
   font-size: 20px;
   font-style: normal;

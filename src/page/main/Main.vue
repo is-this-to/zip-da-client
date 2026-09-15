@@ -1,5 +1,8 @@
 <script setup>
 import Header from "../../component/Header.vue";
+import { useAuthStore } from "../../store/auth/useAuthStore.js";
+
+const authStore = useAuthStore();
 
 const categoryItems = [
   {
@@ -55,7 +58,21 @@ const risingComplexes = [
 
 <template>
   <section class="main-page" aria-label="ZIPDA 메인">
-    <Header title="ZIPDA" :title-weight="900" brand />
+    <Header title="ZIPDA" :title-weight="900" brand>
+      <template #action>
+        <RouterLink
+          v-if="authStore.isLoggedIn"
+          class="main-page__create-button"
+          to="/properties/new"
+          aria-label="매물 등록"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m4 16.5-.5 4 4-.5L19 8.5 15.5 5 4 16.5Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="m13.5 7 3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          </svg>
+        </RouterLink>
+      </template>
+    </Header>
 
     <section class="category-section" aria-label="빠른 메뉴">
       <div class="category-grid">
@@ -161,6 +178,19 @@ const risingComplexes = [
   background: var(--zipda-color-white);
   color: var(--zipda-color-text);
 }
+
+.main-page__create-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--zipda-color-primary);
+  border-radius: 50%;
+}
+
+.main-page__create-button svg { width: 22px; height: 22px; }
+.main-page__create-button:hover { background: #eff5e7; }
+.main-page__create-button:focus-visible { outline: none; box-shadow: var(--zipda-focus-ring); }
 
 /* 실제 메인 콘텐츠는 공통 560px 기준 */
 .category-section {
