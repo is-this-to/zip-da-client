@@ -1,3 +1,5 @@
+import { sanitizeRegistrationOptions } from "../../api/propertyOptionPolicy.js";
+
 // 임호탁 파트 (매물 API 경로·TSID·cursor·If-Match·멱등성 요청 정책)
 export const normalizePropertyId = (value) => {
   if (value == null) return null;
@@ -39,6 +41,21 @@ export const createMyPropertyListParams = ({ cursor, size = 20 }) => ({
   size,
 });
 
+export const mergeRegistrationIntegration = (current, patch = {}) => {
+  const merged = { ...(current ?? {}), ...patch };
+  if (Array.isArray(merged.fileIds)) merged.fileIds = [...merged.fileIds];
+  if (Array.isArray(merged.options)) merged.options = [...merged.options];
+  return merged;
+};
+
+export const createRegistrationStep4Patch = (fileIds, options) => ({
+  fileIds: [...fileIds],
+  options: [...options],
+});
+
+export const isRegistrationBackDisabled = (step, imageUploadBusy) =>
+  step === 4 && imageUploadBusy;
+
 // 임호탁 파트 (팀원 담당 3·4단계 완료값을 매물 등록 API 계약으로 조합)
 const numberOrNull = (value) => value === "" || value == null ? null : Number(value);
 
@@ -71,7 +88,7 @@ export const createPropertyCreateRequest = (form, integration) => ({
   description: form.description.trim(),
   fileIds: integration.fileIds.map(normalizePropertyId),
   address: { ...integration.address },
-  options: integration.options.map((option) => ({ ...option })),
+  options: sanitizeRegistrationOptions(integration.options),
 });
 
 export const createRequestFingerprint = async (request) => {

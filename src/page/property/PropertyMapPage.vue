@@ -1,12 +1,13 @@
 <script setup>
 import {
   computed,
-  nextTick,
   onBeforeUnmount,
   onMounted,
   ref,
   shallowRef,
 } from "vue";
+import { useRouter } from "vue-router";
+import { toPropertyDetailLocation } from "../../route/propertyDetailLocation.js";
 
 import { useRegionStore } from "../../store/region/useRegionStore.js";
 import { usePropertyMapStore } from "../../store/property/usePropertyMapStore.js";
@@ -20,17 +21,17 @@ import PropertyMapList from "../../component/property/PropertyMapList.vue";
 import PropertyMapFilterPanel from "../../component/property/PropertyMapFilterPanel.vue";
 import { getAppliedPropertyMapFilterChips } from "../../util/property/propertyMapFilter.js";
 
+const router = useRouter();
 const regionStore = useRegionStore();
 const propertyMapStore = usePropertyMapStore();
 const propertyListStore = usePropertyListStore();
 const myErrorStore = useMyErrorStore();
 
 const kakaoMapRef = shallowRef(null);
-const mapStageRef = ref(null);
 
 /**
  * 지도에서 매물을 선택한 경우에만 목록의 선택 카드를 자동으로 표시한다.
- * 목록 카드 선택 시에는 모바일 지도 영역으로 화면을 이동한다.
+ * 목록 카드 선택 시에는 공개 상세 화면을 연다.
  */
 const shouldScrollSelectedCard = ref(false);
 
@@ -510,22 +511,8 @@ const handleMapPropertySelect = (property) => {
   propertyMapStore.selectProperty(property);
 };
 
-const handlePropertyCardSelect = async (property) => {
-  shouldScrollSelectedCard.value = false;
-  propertyMapStore.selectProperty(property);
-
-  const focused = kakaoMapRef.value?.focusProperty(property);
-
-  if (!focused || isDesktop.value) {
-    return;
-  }
-
-  await nextTick();
-
-  mapStageRef.value?.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
+const openPropertyDetail = (property) => {
+  router.push(toPropertyDetailLocation(property));
 };
 
 const loadMoreProperties = async () => {
@@ -731,7 +718,6 @@ onBeforeUnmount(() => {
 <template>
   <section class="property-map-page">
     <div
-      ref="mapStageRef"
       class="property-map-stage"
     >
       <!-- 카카오 지도 -->
@@ -908,7 +894,7 @@ onBeforeUnmount(() => {
         :is-initial-loading="propertyListStore.isInitialLoading"
         :is-loading-more="propertyListStore.isLoadingMore"
         :error-message="propertyListStore.errorMessage"
-        @select-property="handlePropertyCardSelect"
+        @open-property-detail="openPropertyDetail"
         @change-sort="handleSortChange"
         @load-more="loadMoreProperties"
         @retry="retryPropertyList"

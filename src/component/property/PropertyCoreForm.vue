@@ -11,6 +11,7 @@ defineProps({
   publisherLocked: { type: Boolean, default: false },
   propertyTypeLocked: { type: Boolean, default: false },
   publisherTypes: { type: Array, default: () => PUBLISHER_TYPES },
+  showLivingConditions: { type: Boolean, default: true },
 });
 
 const form = defineModel({ type: Object, required: true });
@@ -100,7 +101,7 @@ const form = defineModel({ type: Object, required: true });
       <MyInput v-model="form.buildingUse" label="건축물 용도" :maxlength="100" />
     </fieldset>
 
-    <fieldset class="property-form-section" :disabled="disabled">
+    <fieldset v-if="showLivingConditions" class="property-form-section" :disabled="disabled">
       <legend>생활 조건</legend>
       <div class="property-check-grid">
         <label class="property-check"><input v-model="form.isParkingAvailable" type="checkbox" /> 주차 가능</label>

@@ -7,6 +7,7 @@ import { normalizePropertyError } from "../../constant/property/propertyMessage.
 import {
   createMyPropertyListParams,
   createVersionedMutation,
+  mergeRegistrationIntegration,
   normalizePropertyId,
   PROPERTY_API_PATHS,
   resolveIdempotencyKey,
@@ -222,16 +223,33 @@ export const usePropertyManagementStore = defineStore("propertyManagementStore",
   };
 
   const setRegistrationIntegration = (integration) => {
-    registrationIntegration.value = integration
-      ? {
-          ...integration,
-          regionId: normalizePropertyId(integration.regionId),
-          apartmentComplexId: normalizePropertyId(integration.apartmentComplexId),
-          fileIds: Array.isArray(integration.fileIds)
-            ? integration.fileIds.map(normalizePropertyId)
-            : [],
-        }
-      : null;
+    if (integration == null) {
+      registrationIntegration.value = null;
+      return;
+    }
+
+    const patch = { ...integration };
+    if (Object.hasOwn(patch, "regionId")) {
+      patch.regionId = normalizePropertyId(patch.regionId);
+    }
+    if (Object.hasOwn(patch, "apartmentComplexId")) {
+      patch.apartmentComplexId = normalizePropertyId(patch.apartmentComplexId);
+    }
+    if (Object.hasOwn(patch, "fileIds")) {
+      patch.fileIds = Array.isArray(patch.fileIds)
+        ? patch.fileIds.map(normalizePropertyId)
+        : [];
+    }
+    if (Object.hasOwn(patch, "options")) {
+      patch.options = Array.isArray(patch.options)
+        ? patch.options.map((option) => ({ ...option }))
+        : [];
+    }
+
+    registrationIntegration.value = mergeRegistrationIntegration(
+      registrationIntegration.value,
+      patch,
+    );
   };
 
   const setVerificationEvidence = (evidence) => {

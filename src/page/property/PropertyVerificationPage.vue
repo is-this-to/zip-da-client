@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
+import PropertyVerificationFileUploader from "../../component/property/PropertyVerificationFileUploader.vue";
 import { PROPERTY_LABELS, resolvePropertyVerificationMode } from "../../constant/property/propertyStatus.js";
 import { usePropertyManagementStore } from "../../store/property/usePropertyManagementStore.js";
 import { hasVerificationEvidenceData } from "../../util/validator/property/propertyValidator.js";
@@ -12,6 +13,7 @@ const route = useRoute();
 const router = useRouter();
 const store = usePropertyManagementStore();
 const confirmed = ref(false);
+const verificationFileIds = ref([]);
 
 const mode = computed(() => route.params.mode);
 const property = computed(() => store.items.find(
@@ -77,6 +79,10 @@ onMounted(async () => {
 
       <section v-if="property" class="verification-evidence">
         <h2>검증 증빙</h2>
+        <PropertyVerificationFileUploader v-model="verificationFileIds" />
+        <p v-if="verificationFileIds.length" class="info-box">
+          업로드 완료 {{ verificationFileIds.length }}개
+        </p>
         <p v-if="!evidenceReady" class="info-box">
           증빙 파일 담당 화면에서 업로드를 완료해야 신청할 수 있습니다. 증빙 원문과 내부 저장 경로는 이 화면에 표시하지 않습니다.
         </p>
