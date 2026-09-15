@@ -47,6 +47,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   "select-property",
+  "open-property-detail",
   "change-sort",
   "load-more",
   "retry",
@@ -327,7 +328,7 @@ onBeforeUnmount(() => {
           :class="{
             'property-map-card--selected': isSelected(item.propertyId),
           }"
-          @click="emit('select-property', item)"
+          @click="emit('open-property-detail', item)"
         >
           <div class="property-map-card__media">
             <img
