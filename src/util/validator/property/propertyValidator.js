@@ -73,8 +73,24 @@ export const hasPropertyAddressIntegrationData = (draft) => Boolean(
   && isValidPropertyAddress(draft.address),
 );
 
-export const hasPropertyIntegrationData = (draft) => Boolean(
-  hasPropertyAddressIntegrationData(draft)
+export const hasPropertyLocationData = (draft, propertyType) => {
+  if (
+    !draft
+    || !isValidTsid(draft.regionId)
+    || !isValidPropertyAddress(draft.address)
+  ) {
+    return false;
+  }
+
+  if (propertyType === "APARTMENT") {
+    return isValidTsid(draft.apartmentComplexId);
+  }
+
+  return draft.apartmentComplexId == null;
+};
+
+export const hasPropertyOptionFileData = (draft) => Boolean(
+  draft
   && Array.isArray(draft.fileIds)
   && draft.fileIds.length >= 1
   && draft.fileIds.length <= 30
@@ -82,6 +98,14 @@ export const hasPropertyIntegrationData = (draft) => Boolean(
   && Array.isArray(draft.options)
   && draft.options.every((option) => option && !isBlank(option.optionCode)),
 );
+
+export const hasPropertyIntegrationData = (draft, propertyType) => {
+  const hasLocation = propertyType
+    ? hasPropertyLocationData(draft, propertyType)
+    : hasPropertyAddressIntegrationData(draft);
+
+  return hasLocation && hasPropertyOptionFileData(draft);
+};
 
 export const hasVerificationEvidenceData = (evidence) =>
   Array.isArray(evidence)

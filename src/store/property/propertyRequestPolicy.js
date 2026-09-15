@@ -36,6 +36,12 @@ export const PROPERTY_API_PATHS = {
   },
 };
 
+export const PROPERTY_LOCATION_API_PATHS = {
+  kakaoAddress: "/api/property/locations/kakao-address",
+  validate: "/api/property/locations/validate",
+  apartmentComplexes: "/api/property/apartment-complexes",
+};
+
 export const createMyPropertyListParams = ({ cursor, size = 20 }) => ({
   ...(cursor ? { cursor } : {}),
   size,
