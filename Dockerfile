@@ -3,6 +3,11 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
+
+# GitHub Actions의 --build-arg 인자 받기
+ARG VITE_API_BASE_URL
+ARG VITE_KAKAO_MAP_APP_KEY
+
 COPY . .
 RUN npm run build
 
