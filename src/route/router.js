@@ -106,6 +106,13 @@ const routes = [
     meta: setMeta(true, false, ["USER", "AGENT"], true),
   },
   {
+    path: "/mypage/reports",
+    name: "my-property-reports",
+    component: () =>
+      import("../page/report/PropertyReportListPage.vue"),
+    meta: setMeta(true, false, ["USER", "AGENT"]),
+  },
+  {
     path: "/mypage/agent-application/documents",
     component: AgentDocumentUpload,
     meta: setMeta(true, false, ["USER"]),

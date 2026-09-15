@@ -180,8 +180,12 @@ onMounted(loadProfile);
           <span>매물 등록</span>
         </button>
 
-        <!-- 신고 내역 : 아직 디자인만 -->
-        <div class="my-shortcuts__item">
+        <!-- 신고 내역 -->
+        <button
+          type="button"
+          class="my-shortcuts__item"
+          @click="router.push('/mypage/reports')"
+        >
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -204,7 +208,7 @@ onMounted(loadProfile);
           </svg>
 
           <span>신고 내역</span>
-        </div>
+        </button>
       </div>
 
       <!-- 내 정보 메뉴 -->
