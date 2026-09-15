@@ -30,15 +30,15 @@ const propertyTypeLabel = computed(() => ({
 const facts = computed(() => {
   const item = detail.value;
   if (!item) return [];
+  const roomBathroom = [item.roomCount != null ? `방 ${item.roomCount}개` : null, item.bathroomCount != null ? `욕실 ${item.bathroomCount}개` : null].filter(Boolean).join(" / ");
   const rows = [
     ["전용 면적", item.exclusiveArea, (value) => `${value}㎡`],
-    ["공급 면적", item.supplyArea, (value) => `${value}㎡`],
     ["층", item.floor, (value) => `${value}층${item.totalFloor != null ? ` / ${item.totalFloor}층` : ""}`],
-    ["방", item.roomCount, (value) => `${value}개`],
-    ["욕실", item.bathroomCount, (value) => `${value}개`],
+    ["방·욕실", roomBathroom, String],
     ["방향", item.direction, String],
     ["층 조건", item.floorCondition, String],
     ["관리비", item.maintenanceFee, formatKoreanAmount],
+    ["공급 면적", item.supplyArea, (value) => `${value}㎡`],
     ["건물 용도", item.buildingUse, String],
     ["사용승인일", item.approvalDate, String],
     ["주차", item.isParkingAvailable, (value) => value ? "가능" : "불가"],
@@ -115,14 +115,14 @@ const toggleFavorite = async () => {
         <template v-if="images.length > 1">
           <button type="button" class="property-detail__gallery-button property-detail__gallery-button--left" aria-label="이전 이미지" @click="changeImage(-1)">‹</button>
           <button type="button" class="property-detail__gallery-button property-detail__gallery-button--right" aria-label="다음 이미지" @click="changeImage(1)">›</button>
-          <span class="property-detail__counter">{{ imageIndex + 1 }} / {{ images.length }}</span>
         </template>
+        <span v-if="images.length" class="property-detail__counter">{{ imageIndex + 1 }} / {{ images.length }}</span>
       </section>
       <section class="property-detail__section property-detail__summary">
         <span class="property-detail__eyebrow">{{ propertyTypeLabel }}</span>
-        <h1>{{ detail.title || '매물' }}</h1>
         <strong class="property-detail__price">{{ price }}</strong>
         <p class="property-detail__address">{{ detail.publicAddress }}</p>
+        <h1>{{ detail.title || '매물' }}</h1>
         <p class="property-detail__favorite-count">찜 {{ detail.favoriteCount }}명</p>
       </section>
       <section v-if="facts.length" class="property-detail__section">
@@ -165,18 +165,18 @@ const toggleFavorite = async () => {
 .property-detail__gallery-button--left { left: 12px; } .property-detail__gallery-button--right { right: 12px; }
 .property-detail__counter { position: absolute; right: 14px; bottom: 14px; padding: 5px 10px; border-radius: 14px; color: white; background: rgb(0 0 0 / 60%); font-size: 12px; }
 .property-detail__section { padding: 24px var(--zipda-page-padding); border-bottom: 1px solid var(--zipda-color-border); }
-.property-detail__section h1 { margin: 8px 0 12px; font-size: 23px; } .property-detail__section h2 { margin: 0 0 20px; font-size: 18px; }
+.property-detail__section h1 { margin: 14px 0 0; font-size: 18px; font-weight: 600; } .property-detail__section h2 { margin: 0 0 20px; font-size: 18px; }
 .property-detail__eyebrow { color: var(--zipda-color-primary-active); font-size: 13px; font-weight: 700; }
-.property-detail__price { display: block; font-size: 24px; } .property-detail__address { margin: 10px 0; color: var(--zipda-color-text-muted); }
+.property-detail__price { display: block; margin-top: 8px; font-size: 28px; font-weight: 800; } .property-detail__address { margin: 10px 0; color: var(--zipda-color-text-muted); }
 .property-detail__favorite-count { margin: 0; color: var(--zipda-color-text-muted); font-size: 12px; }
 .property-detail__facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 12px; margin: 0; }
 .property-detail__facts div { min-width: 0; } .property-detail__facts dt { color: var(--zipda-color-text-muted); font-size: 12px; } .property-detail__facts dd { margin: 5px 0 0; font-weight: 600; overflow-wrap: anywhere; }
 .property-detail__options { display: flex; flex-wrap: wrap; gap: 8px; } .property-detail__option { padding: 8px 12px; border-radius: 18px; background: var(--zipda-color-subtle-background); font-size: 13px; }
-.property-detail__publisher { padding: 18px; border-radius: var(--zipda-radius-large); color: var(--zipda-color-primary-active); background: #e9f5db; font-weight: 700; }
-.property-detail__description p { margin: 0; white-space: pre-line; line-height: 1.7; overflow-wrap: anywhere; }
+.property-detail__publisher { padding: 18px; border-radius: var(--zipda-radius-large); color: var(--zipda-color-primary-active); background: var(--zipda-color-primary-light); font-weight: 700; }
+.property-detail__description p { margin: 0; padding: 18px; border-radius: var(--zipda-radius-large); background: var(--zipda-color-subtle-background); white-space: pre-line; line-height: 1.7; overflow-wrap: anywhere; }
 .property-detail__state { padding: 36px 20px; text-align: center; } .property-detail__notice { margin: 0; padding: 10px 20px; color: var(--zipda-color-primary-active); font-size: 13px; }
 .property-detail__actions { position: fixed; z-index: 10; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: var(--zipda-app-width); display: grid; grid-template-columns: 100px 1fr; gap: 10px; padding: 12px var(--zipda-page-padding) calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--zipda-color-border); background: var(--zipda-color-white); }
 .property-detail__actions button { min-height: 48px; border-radius: var(--zipda-radius-medium); font-weight: 700; }
 .property-detail__favorite-action { color: #d93b32; background: white; border: 1px solid var(--zipda-color-border); }
-.property-detail__contact { color: var(--zipda-color-text-muted); background: var(--zipda-color-disabled); border: 0; }
+.property-detail__contact { color: var(--zipda-color-primary-active); background: var(--zipda-color-primary-light); border: 0; opacity: .7; cursor: not-allowed; }
 </style>
