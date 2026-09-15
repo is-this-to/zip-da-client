@@ -1,12 +1,13 @@
 <script setup>
 // 임호탁 파트 (소유자·임차인·재검증 신청 화면)
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import PropertyVerificationFileUploader from "../../component/property/PropertyVerificationFileUploader.vue";
 import { PROPERTY_LABELS, resolvePropertyVerificationMode } from "../../constant/property/propertyStatus.js";
 import { usePropertyManagementStore } from "../../store/property/usePropertyManagementStore.js";
+import { createVerificationEvidence } from "../../store/property/propertyRequestPolicy.js";
 import { hasVerificationEvidenceData } from "../../util/validator/property/propertyValidator.js";
 
 const route = useRoute();
@@ -14,6 +15,8 @@ const router = useRouter();
 const store = usePropertyManagementStore();
 const confirmed = ref(false);
 const verificationFileIds = ref([]);
+const evidenceSession = ref(0);
+const isSubmitting = ref(false);
 
 const mode = computed(() => route.params.mode);
 const property = computed(() => store.items.find(
@@ -29,21 +32,46 @@ const modeAllowed = computed(() =>
   resolvePropertyVerificationMode(property.value) === mode.value,
 );
 
+const resetVerification = () => {
+  evidenceSession.value += 1;
+  confirmed.value = false;
+  verificationFileIds.value = [];
+  store.setVerificationEvidence([]);
+};
+
+const stopEvidenceSync = watch(
+  [verificationFileIds, mode, () => property.value?.publisherType],
+  ([fileIds, verificationMode, publisherType]) => {
+    store.setVerificationEvidence(createVerificationEvidence(fileIds, verificationMode, publisherType));
+  },
+  { immediate: true, deep: true, flush: "sync" },
+);
+
 const submit = async () => {
-  if (!property.value || !modeAllowed.value || !confirmed.value || !evidenceReady.value) return;
+  if (isSubmitting.value || store.isActionLoading
+    || !property.value || !modeAllowed.value || !confirmed.value || !evidenceReady.value) return;
+  const session = evidenceSession.value;
+  isSubmitting.value = true;
   try {
     await store.submitVerification(property.value, mode.value, store.verificationEvidence);
-    store.setVerificationEvidence([]);
+    if (session !== evidenceSession.value) return;
+    resetVerification();
     await router.replace("/my-properties");
   } catch { /* store owns feedback */ }
+  finally { isSubmitting.value = false; }
 };
 
 const loadProperty = async () => {
   try { await store.fetchEditDetail(route.params.propertyId); } catch { /* store owns feedback */ }
 };
 
-onMounted(async () => {
+watch(() => [route.params.propertyId, route.params.mode], async (_, __, onCleanup) => {
+  resetVerification();
+  store.clearFeedback();
+  let active = true;
+  onCleanup(() => { active = false; });
   const access = await store.ensureAccess(["USER", "AGENT"]);
+  if (!active) return;
   if (access === "login") {
     await router.replace("/sign-in");
     return;
@@ -51,6 +79,11 @@ onMounted(async () => {
   if (access !== "allowed") return;
   if (property.value) return;
   await loadProperty();
+}, { immediate: true, flush: "sync" });
+
+onBeforeUnmount(() => {
+  stopEvidenceSync();
+  resetVerification();
 });
 </script>
 
@@ -79,12 +112,12 @@ onMounted(async () => {
 
       <section v-if="property" class="verification-evidence">
         <h2>검증 증빙</h2>
-        <PropertyVerificationFileUploader v-model="verificationFileIds" />
+        <PropertyVerificationFileUploader :key="evidenceSession" v-model="verificationFileIds" />
         <p v-if="verificationFileIds.length" class="info-box">
           업로드 완료 {{ verificationFileIds.length }}개
         </p>
         <p v-if="!evidenceReady" class="info-box">
-          증빙 파일 담당 화면에서 업로드를 완료해야 신청할 수 있습니다. 증빙 원문과 내부 저장 경로는 이 화면에 표시하지 않습니다.
+          검증 신청을 위해 업로드가 완료된 증빙 파일이 1개 이상 필요합니다.
         </p>
         <ul v-else>
           <li v-for="(item, index) in store.verificationEvidence" :key="`${item.propertyFileId}-${index}`">
@@ -112,8 +145,8 @@ onMounted(async () => {
         v-if="property"
         block
         size="large"
-        :disabled="!property || !modeAllowed || !evidenceReady || !confirmed"
-        :loading="store.pendingAction === 'verification'"
+        :disabled="!property || !modeAllowed || !evidenceReady || !confirmed || store.isActionLoading"
+        :loading="isSubmitting || store.pendingAction === 'verification'"
         @click="submit"
       >{{ title }}</MyButton>
     </div>

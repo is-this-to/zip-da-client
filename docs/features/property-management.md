@@ -78,7 +78,9 @@ apartmentComplexId, fileId와 propertyFileId는 문자열로 유지한다. curso
 
 정확 주소와 좌표는 공개 화면, URL, 로그에 출력하지 않고 등록 요청에만 사용한다.
 
-검증 증빙 업로드 완료 후에는 `setVerificationEvidence()`에 다음 값을 전달한다.
+검증 페이지에 통합된 `PropertyVerificationFileUploader`는 `VERIFICATION` 용도로
+업로드 세션 생성 → 스토리지 PUT → 완료 API 호출을 수행하고, 완료된 문자열 파일 ID만 반환한다.
+페이지는 `createVerificationEvidence()`로 이를 변환해 `setVerificationEvidence()`에 전달한다.
 
 ```js
 [
@@ -92,6 +94,25 @@ apartmentComplexId, fileId와 propertyFileId는 문자열로 유지한다. curso
 
 이 연결값이 없으면 등록 및 검증 제출 버튼은 비활성화된다. 임시 입력이나 내부 objectKey로
 우회하지 않는다.
+
+### 검증 증빙 연결
+
+| 검증 모드 | 등록 주체 | 기본 증빙 유형 |
+| --- | --- | --- |
+| owner | 소유자 | REGISTRY_DOCUMENT |
+| tenant | 임차인 | OWNERSHIP_CONTRACT |
+| reverification | DIRECT_OWNER | REGISTRY_DOCUMENT |
+| reverification | DIRECT_TENANT | OWNERSHIP_CONTRACT |
+| reverification | AGENT_BROKERAGE | BROKERAGE_REGISTRATION |
+
+유형 결정은 `resolveVerificationEvidenceType()`에서 관리한다. 파일 추가·삭제·재정렬 시
+현재 배열 순서로 `sortOrder`를 0부터 다시 부여한다. 신청에는 매물 정보, 허용된 검증 모드,
+`hasVerificationEvidenceData()`를 통과한 증빙, 동의 체크가 모두 필요하다.
+
+화면 진입·이탈, 매물 ID 또는 검증 모드 변경, 제출 성공 시 증빙과 동의를 초기화한다.
+업로더도 새로 생성해 이전 파일 목록을 재사용하지 않는다. 제출 중 추가 클릭은 차단하며,
+이전 화면의 요청이 늦게 완료돼도 새 화면의 증빙을 지우거나 목록으로 이동시키지 않는다.
+실패 시 기존 store의 오류 메시지와 traceId 표시를 유지한다.
 
 ## 복구 범위
 
@@ -118,6 +139,7 @@ publicationStatus, transactionStatus, verificationStatus는 목록과 수정 화
 
 ```text
 node --test test/propertyManagementPolicy.test.js
+node --test test/propertyVerificationPage.test.js
 npm run build
 git diff --check
 ```
@@ -126,10 +148,13 @@ Node 내장 테스트는 문자열 TSID, If-Match, 등록 멱등성 키 재사�
 검증한다. 주소·단지·사진·옵션·검증 증빙은 팀원 모듈이 반환할 계약 형태의 fixture를 사용해
 최종 등록 및 검증 요청에 문자열 TSID와 완료값이 그대로 포함되는지 확인한다.
 
+검증 페이지 테스트는 실제 Vue setup과 Pinia store를 실행하고 HTTP 전송을 테스트 응답으로
+대체한다. 제출 조건, 중복 요청 차단, 성공·실패 처리, 매물·모드 변경 및 이탈 시 초기화를
+검증한다. 실제 스토리지 업로드와 운영 서버 연결은 이 테스트 범위에 포함하지 않는다.
+
 ## 현재 통합 제한
 
 - 등록용 정확 주소·단지 선택 컴포넌트가 현재 dev에 없다.
-- 매물 옵션·이미지 및 검증 증빙 업로드 컴포넌트가 현재 dev에 없다.
 - 수정용 상세 응답은 주소와 옵션을 반환하지 않아 해당 영역을 기존 값으로 채울 수 없다.
 - 내 매물 API는 상태 필터 파라미터 없이 cursor와 size만 받는다.
 
