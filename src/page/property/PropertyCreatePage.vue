@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
+import PropertyAddressComplexStep from "../../component/property/PropertyAddressComplexStep.vue";
 import PropertyCoreForm from "../../component/property/PropertyCoreForm.vue";
 import PropertyRegistrationStep4 from "../../component/property/PropertyRegistrationStep4.vue";
 import { PROPERTY_LABELS } from "../../constant/property/propertyStatus.js";
@@ -15,8 +16,8 @@ import { usePropertyManagementStore } from "../../store/property/usePropertyMana
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 import { formatPropertyPrice } from "../../util/property/formatPropertyPrice.js";
 import {
-  hasPropertyAddressIntegrationData,
   hasPropertyIntegrationData,
+  hasPropertyLocationData,
   validatePropertyCore,
 } from "../../util/validator/property/propertyValidator.js";
 
@@ -59,10 +60,14 @@ const publisherChoices = computed(() => role.value === "AGENT"
       { value: "DIRECT_OWNER", title: "집주인 직거래", description: "소유관계를 확인한 뒤 공개합니다." },
       { value: "DIRECT_TENANT", title: "세입자 직거래", description: "임대차관계를 확인한 뒤 공개합니다." },
     ]);
-const integrationReady = computed(() => hasPropertyIntegrationData(store.registrationIntegration));
-const addressConnected = computed(() =>
-  hasPropertyAddressIntegrationData(store.registrationIntegration),
-);
+const locationReady = computed(() => hasPropertyLocationData(
+  store.registrationIntegration,
+  form.value.propertyType,
+));
+const integrationReady = computed(() => hasPropertyIntegrationData(
+  store.registrationIntegration,
+  form.value.propertyType,
+));
 const backDisabled = computed(() =>
   isRegistrationBackDisabled(step.value, step4ImageUploadBusy.value),
 );
@@ -108,12 +113,20 @@ const nextFromCore = () => {
   errors.value = validatePropertyCore(form.value);
   if (Object.keys(errors.value).length > 0) return;
   store.clearFeedback();
+  step.value = 3;
+};
+
+const completeLocationStep = (locationIntegration) => {
+  store.setRegistrationIntegration(locationIntegration);
   step.value = 4;
 };
 
 const completeStep4 = (patch) => {
   store.setRegistrationIntegration(patch);
-  if (!hasPropertyAddressIntegrationData(store.registrationIntegration)) {
+  if (!hasPropertyLocationData(
+    store.registrationIntegration,
+    form.value.propertyType,
+  )) {
     errors.value = {
       ...errors.value,
       integration: "주소·Region 검증 결과가 필요합니다. 이전 단계에서 주소 연결 상태를 확인해 주세요.",
@@ -155,6 +168,10 @@ const goBack = () => {
   }
 
   if (step.value === 4) {
+    step.value = 3;
+    return;
+  }
+  if (step.value === 3) {
     step.value = 2;
     return;
   }
@@ -226,7 +243,17 @@ onMounted(async () => {
           <div class="step-heading__copy">
           <p class="step-number"><strong>{{ step }}</strong>/5</p>
           <h1 class="page-title">
-            {{ step === 1 ? "어떤 매물을 등록하나요?" : step === 2 ? "매물 정보를 입력해 주세요" : step === 4 ? "옵션과 사진을 등록해 주세요" : "등록 내용을 확인해 주세요" }}
+            {{
+              step === 1
+                ? "어떤 매물을 등록하나요?"
+                : step === 2
+                  ? "매물 정보를 입력해 주세요"
+                  : step === 3
+                    ? "주소와 단지를 확인해 주세요"
+                    : step === 4
+                      ? "옵션과 사진을 등록해 주세요"
+                      : "등록 내용을 확인해 주세요"
+            }}
           </h1>
         </div>
         </div>
@@ -273,16 +300,24 @@ onMounted(async () => {
 
         <div class="info-box integration-box">
           <strong>주소·Region 연결 상태</strong>
-          <p v-if="addressConnected">준비된 주소·단지 검증 결과를 그대로 유지합니다.</p>
+          <p v-if="locationReady">준비된 주소·단지 검증 결과를 그대로 유지합니다.</p>
           <p v-else>주소·단지 검증 결과가 아직 연결되지 않았습니다.</p>
-          <p>옵션과 사진은 다음 단계에서 입력합니다.</p>
+          <p>주소 검증을 마치면 옵션과 사진 입력 단계로 이동합니다.</p>
         </div>
 
         <div class="form-actions form-actions--step create-actions">
           <MyButton variant="outline" @click="goBack">이전</MyButton>
-          <MyButton @click="nextFromCore">4단계 옵션·사진</MyButton>
+          <MyButton @click="nextFromCore">3단계 주소·단지</MyButton>
         </div>
         </template>
+
+        <PropertyAddressComplexStep
+          v-else-if="step === 3"
+          :property-type="form.propertyType"
+          :initial-value="store.registrationIntegration"
+          @back="goBack"
+          @complete="completeLocationStep"
+        />
 
         <PropertyRegistrationStep4
           v-else-if="step === 4"
@@ -295,7 +330,6 @@ onMounted(async () => {
           @busy-change="step4ImageUploadBusy = $event"
           @complete="completeStep4"
         />
-
         <template v-else-if="step === 5">
         <section class="review-complete" aria-label="등록 준비 완료">
           <span aria-hidden="true">✓</span>

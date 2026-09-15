@@ -8,6 +8,7 @@ import {
   createVersionedMutation,
   normalizePropertyId,
   PROPERTY_API_PATHS,
+  PROPERTY_LOCATION_API_PATHS,
   resolveIdempotencyKey,
 } from "../src/store/property/propertyRequestPolicy.js";
 import { normalizePropertyError } from "../src/constant/property/propertyMessage.js";
@@ -17,6 +18,7 @@ import {
 } from "../src/constant/property/propertyStatus.js";
 import {
   hasPropertyIntegrationData,
+  hasPropertyLocationData,
   hasVerificationEvidenceData,
   validatePropertyCore,
 } from "../src/util/validator/property/propertyValidator.js";
@@ -233,6 +235,39 @@ test("내 매물 다음 cursor는 해석하지 않고 그대로 전달한다", (
 
 test("내 매물 목록은 Property 서비스 공통 경로를 사용한다", () => {
   assert.equal(PROPERTY_API_PATHS.myList, "/api/property/me");
+});
+
+test("등록 3단계는 실제 Property 위치·단지 API 경로를 사용한다", () => {
+  assert.deepEqual(PROPERTY_LOCATION_API_PATHS, {
+    kakaoAddress: "/api/property/locations/kakao-address",
+    validate: "/api/property/locations/validate",
+    apartmentComplexes: "/api/property/apartment-complexes",
+  });
+});
+
+test("아파트만 검증된 단지 ID를 필수로 요구한다", () => {
+  const location = {
+    regionId: "4065",
+    apartmentComplexId: null,
+    address: {
+      roadAddress: "대구광역시 수성구 달구벌대로 2450",
+      jibunAddress: "대구광역시 수성구 범어동 123",
+      legalDongCode: "2726010100",
+      longitude: 128.625123,
+      latitude: 35.859321,
+    },
+  };
+
+  assert.equal(hasPropertyLocationData(location, "APARTMENT"), false);
+  assert.equal(hasPropertyLocationData({
+    ...location,
+    apartmentComplexId: "4423",
+  }, "APARTMENT"), true);
+  assert.equal(hasPropertyLocationData(location, "VILLA"), true);
+  assert.equal(hasPropertyLocationData({
+    ...location,
+    apartmentComplexId: "4423",
+  }, "VILLA"), false);
 });
 
 test("등록 연동값은 문자열 TSID와 백엔드 주소·파일 계약을 모두 만족해야 한다", () => {
