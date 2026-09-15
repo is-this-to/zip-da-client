@@ -5,9 +5,9 @@ import {
   normalizeUploadSessionFiles,
 } from "./propertyFilePolicy.js";
 
-export const createPropertyUploadSession = async (files) => {
+export const createPropertyUploadSession = async (files, filePurpose = "PROPERTY_IMAGE") => {
   const response = await myAxios.post("/api/property/files/upload-sessions", {
-    filePurpose: "PROPERTY_IMAGE",
+    filePurpose,
     files: files.map((file) => ({ name: file.name, size: file.size })),
   });
   return normalizeUploadSessionFiles(response.data?.data?.files, files.length);
