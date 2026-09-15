@@ -135,27 +135,34 @@ const backFromStep4 = (patch) => {
 
 const goBack = () => {
   if (backDisabled.value) return;
+
   if (step.value === 4) {
     const patch = step4.value?.currentPatch();
-    if (patch) store.setRegistrationIntegration(patch);
+
+    if (patch) {
+      store.setRegistrationIntegration(patch);
+    }
   }
+
   store.clearFeedback();
   errors.value = {};
+
   if (step.value === 5) {
     confirmedFacts.value = false;
     confirmedEvidence.value = false;
     step.value = 4;
     return;
   }
+
   if (step.value === 4) {
     step.value = 2;
     return;
   }
+
   if (step.value === 2) {
     step.value = 1;
     return;
   }
-  router.push("/my-properties");
 };
 
 const submit = async () => {
@@ -201,9 +208,22 @@ onMounted(async () => {
         <MyButton variant="outline" @click="router.push('/main')">홈으로</MyButton>
       </div>
       <template v-else>
-        <div class="step-heading">
-        <button class="step-back" type="button" aria-label="이전" :disabled="backDisabled" @click="goBack">←</button>
-        <div class="step-heading__copy">
+        <div
+          class="step-heading"
+          :class="{ 'step-heading--first': step === 1 }"
+        >
+          <button
+            v-if="step !== 1"
+            class="step-back"
+            type="button"
+            aria-label="이전"
+            :disabled="backDisabled"
+            @click="goBack"
+          >
+            ←
+          </button>
+
+          <div class="step-heading__copy">
           <p class="step-number"><strong>{{ step }}</strong>/5</p>
           <h1 class="page-title">
             {{ step === 1 ? "어떤 매물을 등록하나요?" : step === 2 ? "매물 정보를 입력해 주세요" : step === 4 ? "옵션과 사진을 등록해 주세요" : "등록 내용을 확인해 주세요" }}
@@ -328,6 +348,9 @@ onMounted(async () => {
 .property-progress span { display: block; height: 100%; background: var(--zipda-color-primary); transition: width 180ms ease; }
 .property-create-content { display: grid; gap: 24px; padding-top: 18px; }
 .step-heading { display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: start; gap: 6px; }
+.step-heading--first {
+  grid-template-columns: minmax(0, 1fr);
+}
 .step-heading__copy { display: grid; gap: 12px; }
 .step-back { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; color: var(--zipda-color-text); background: transparent; border: 0; font-size: 20px; cursor: pointer; }
 .step-back:disabled { color: var(--zipda-color-text-muted); cursor: not-allowed; opacity: 0.5; }

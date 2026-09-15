@@ -103,7 +103,7 @@ onMounted(initialize);
   <section class="page my-properties-page">
     <Header title="내 매물">
       <template #action>
-        <button class="header-add" type="button" aria-label="매물 등록" @click="router.push('/properties/new')">＋</button>
+        <Header title="내 매물" />
       </template>
     </Header>
 
@@ -113,7 +113,6 @@ onMounted(initialize);
           <h1 class="page-title">내가 관리하는 매물</h1>
           <p class="page-description">공개·거래·인증 상태를 각각 확인하세요.</p>
         </div>
-        <MyButton size="small" variant="primary" @click="router.push('/properties/new')">매물 등록</MyButton>
       </div>
 
       <div v-if="store.error" class="error-box" role="alert">
@@ -142,7 +141,6 @@ onMounted(initialize);
       <div v-else-if="!store.error" class="empty-state">
         <strong>등록한 매물이 없습니다.</strong>
         <p>첫 매물을 등록하면 공개·거래·인증 상태를 여기에서 관리할 수 있습니다.</p>
-        <MyButton @click="router.push('/properties/new')">매물 등록</MyButton>
       </div>
     </div>
 

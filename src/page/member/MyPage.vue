@@ -232,12 +232,15 @@ onMounted(loadProfile);
           <i>›</i>
         </button>
 
-        <!-- 내가 올린 매물 : 아직 디자인만 -->
-        <div class="my-menu__row">
+        <!-- 내가 올린 매물 -->
+        <button
+          type="button"
+          @click="router.push('/my-properties')"
+        >
           <span aria-hidden="true">⌂</span>
           <strong>내가 올린 매물</strong>
           <i>›</i>
-        </div>
+        </button>
 
         <!-- 중개사 전용 메뉴 -->
         <template v-if="isAgent && agentId">
