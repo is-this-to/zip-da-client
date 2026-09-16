@@ -3,8 +3,6 @@ name: CLIENT Build And Deploy
 
 # 이벤트 트리거 정의
 on:
-  pull_request:
-    branches: [master]
   push:
     branches: [master]
 
