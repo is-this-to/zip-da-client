@@ -25,6 +25,7 @@ const renderer = createRenderer({
 let server;
 let Page;
 let useStore;
+let axios;
 
 before(async () => {
   server = await createServer({
@@ -39,6 +40,7 @@ before(async () => {
   useStore = (await server.ssrLoadModule(
     "/src/store/property/usePropertyManagementStore.js"
   )).usePropertyManagementStore;
+  axios = (await server.ssrLoadModule("/src/api/myAxios.js")).default;
 });
 
 after(async () => {
@@ -71,7 +73,7 @@ const mountPage = async (t, access = "allowed") => {
   t.after(() => app.unmount());
   await flushMounted();
 
-  return { fetchCalls, navigations, state: instance.$.setupState };
+  return { fetchCalls, navigations, state: instance.$.setupState, store };
 };
 
 const renderPage = async (configureStore) => {
@@ -157,4 +159,210 @@ test("내 매물 화면은 단일 헤더와 로딩·빈 결과·오류·목록 �
   });
   assert.match(listHtml, /내 매물 목록 테스트/);
   assert.match(listHtml, /더 보기/);
+});
+
+test("거래 상태 모달은 허용된 전이와 변경 사유만 제출한다", async (t) => {
+  const { state, store } = await mountPage(t);
+  const calls = [];
+  store.changeTransactionStatus = async (...args) => calls.push(args);
+
+  state.openStatus(propertyFixture);
+  assert.equal(state.dialogMode, "status");
+  assert.equal(state.targetStatus, "RESERVED");
+  assert.equal(state.isStatusSelectable("RESERVED"), true);
+  assert.equal(state.isStatusSelectable("AVAILABLE"), false);
+  assert.equal(state.isStatusSelectable("COMPLETED"), false);
+
+  await state.submitStatus();
+  assert.equal(state.localError, "변경 사유를 입력해 주세요.");
+  assert.deepEqual(calls, []);
+
+  state.reason = "테스트 상태 변경";
+  state.targetStatus = "COMPLETED";
+  await state.submitStatus();
+  assert.equal(state.localError, "변경할 수 있는 거래 상태를 선택해 주세요.");
+  assert.deepEqual(calls, []);
+
+  state.targetStatus = "RESERVED";
+  await state.submitStatus();
+  assert.deepEqual(calls, [[propertyFixture, "RESERVED", "테스트 상태 변경"]]);
+  assert.equal(state.dialogMode, "");
+  assert.equal(state.selectedProperty, null);
+});
+
+test("거래 상태 변경은 중복 제출을 차단하고 성공한 최신 상태를 목록에 반영한다", async (t) => {
+  const { state, store } = await mountPage(t);
+  store.items = [{ ...propertyFixture }];
+  const originalAdapter = axios.defaults.adapter;
+  const requests = [];
+  const resolvers = [];
+  axios.defaults.adapter = (config) => {
+    requests.push(config);
+    return new Promise((resolve) => resolvers.push(() => resolve({
+      config,
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      data: {
+        code: "00",
+        data: {
+          ...propertyFixture,
+          version: 4,
+          transactionStatus: "RESERVED",
+        },
+      },
+    })));
+  };
+  t.after(() => {
+    axios.defaults.adapter = originalAdapter;
+  });
+
+  state.openStatus(store.items[0]);
+  state.reason = "예약 협의 시작";
+  const firstSubmit = state.submitStatus();
+  const duplicateSubmit = state.submitStatus();
+  await new Promise((resolve) => setImmediate(resolve));
+  resolvers.forEach((resolve) => resolve());
+  await Promise.all([firstSubmit, duplicateSubmit]);
+
+  assert.equal(requests.length, 1);
+  assert.equal(
+    requests[0].url,
+    `/api/property/properties/${propertyFixture.propertyId}/transaction-status`,
+  );
+  assert.equal(requests[0].headers.get("If-Match"), '"3"');
+  assert.deepEqual(JSON.parse(requests[0].data), {
+    version: 3,
+    targetStatus: "RESERVED",
+    reason: "예약 협의 시작",
+  });
+  assert.equal(store.items[0].transactionStatus, "RESERVED");
+  assert.equal(store.items[0].version, 4);
+  assert.equal(state.dialogMode, "");
+});
+
+test("버전 충돌 시 거래 상태 모달과 입력값을 유지한다", async (t) => {
+  const { state, store } = await mountPage(t);
+  store.items = [{ ...propertyFixture }];
+  const originalAdapter = axios.defaults.adapter;
+  axios.defaults.adapter = async () => {
+    throw {
+      response: {
+        status: 409,
+        data: {
+          code: "P03",
+          message: "VERSION_CONFLICT",
+          traceId: "trace-status-conflict",
+        },
+      },
+    };
+  };
+  t.after(() => {
+    axios.defaults.adapter = originalAdapter;
+  });
+
+  state.openStatus(store.items[0]);
+  await state.submitStatus();
+  assert.equal(state.localError, "변경 사유를 입력해 주세요.");
+  state.reason = "예약 협의 시작";
+  await state.submitStatus();
+
+  assert.equal(state.dialogMode, "status");
+  assert.equal(state.reason, "예약 협의 시작");
+  assert.equal(state.localError, "");
+  assert.equal(store.conflict.traceId, "trace-status-conflict");
+  assert.equal(store.items[0].transactionStatus, "AVAILABLE");
+});
+
+// 임호탁 파트 (매물 소프트 삭제 UX 회귀 검증)
+test("매물 삭제 모달은 삭제 사유를 필수로 검증한다", async (t) => {
+  const { state, store } = await mountPage(t);
+  const calls = [];
+  store.deleteProperty = async (...args) => calls.push(args);
+
+  state.openDelete(propertyFixture);
+  assert.equal(state.dialogMode, "delete");
+
+  await state.submitDelete();
+  assert.equal(state.localError, "삭제 사유를 입력해 주세요.");
+  assert.deepEqual(calls, []);
+
+  state.reason = "거래 종료로 매물을 내립니다.";
+  await state.submitDelete();
+  assert.deepEqual(calls, [[propertyFixture, "거래 종료로 매물을 내립니다."]]);
+  assert.equal(state.dialogMode, "");
+  assert.equal(state.selectedProperty, null);
+});
+
+test("매물 삭제는 중복 제출을 차단하고 성공한 매물을 목록에서 제거한다", async (t) => {
+  const { state, store } = await mountPage(t);
+  store.items = [{ ...propertyFixture }];
+  const originalAdapter = axios.defaults.adapter;
+  const requests = [];
+  const resolvers = [];
+  axios.defaults.adapter = (config) => {
+    requests.push(config);
+    return new Promise((resolve) => resolvers.push(() => resolve({
+      config,
+      status: 204,
+      statusText: "No Content",
+      headers: {},
+      data: null,
+    })));
+  };
+  t.after(() => {
+    axios.defaults.adapter = originalAdapter;
+  });
+
+  state.openDelete(store.items[0]);
+  state.reason = "거래 종료로 매물을 내립니다.";
+  const firstSubmit = state.submitDelete();
+  const duplicateSubmit = state.submitDelete();
+  await new Promise((resolve) => setImmediate(resolve));
+  resolvers.forEach((resolve) => resolve());
+  await Promise.all([firstSubmit, duplicateSubmit]);
+
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].method, "delete");
+  assert.equal(requests[0].url, `/api/property/properties/${propertyFixture.propertyId}`);
+  assert.equal(requests[0].headers.get("If-Match"), '"3"');
+  assert.deepEqual(JSON.parse(requests[0].data), {
+    version: 3,
+    deleteReason: "거래 종료로 매물을 내립니다.",
+  });
+  assert.deepEqual(store.items, []);
+  assert.equal(state.dialogMode, "");
+});
+
+test("삭제 버전 충돌 시 모달과 삭제 사유를 유지한다", async (t) => {
+  const { state, store } = await mountPage(t);
+  store.items = [{ ...propertyFixture }];
+  const originalAdapter = axios.defaults.adapter;
+  axios.defaults.adapter = async () => {
+    throw {
+      response: {
+        status: 409,
+        data: {
+          code: "P03",
+          message: "VERSION_CONFLICT",
+          traceId: "trace-delete-conflict",
+        },
+      },
+    };
+  };
+  t.after(() => {
+    axios.defaults.adapter = originalAdapter;
+  });
+
+  state.openDelete(store.items[0]);
+  await state.submitDelete();
+  assert.equal(state.localError, "삭제 사유를 입력해 주세요.");
+  state.reason = "거래 종료로 매물을 내립니다.";
+  await state.submitDelete();
+
+  assert.equal(state.dialogMode, "delete");
+  assert.equal(state.reason, "거래 종료로 매물을 내립니다.");
+  assert.equal(state.localError, "");
+  assert.equal(store.conflict.traceId, "trace-delete-conflict");
+  assert.equal(store.items.length, 1);
 });
