@@ -97,6 +97,15 @@ const submitDelete = async () => {
   } catch { /* store owns feedback */ }
 };
 
+const openDetail = (property) => {
+  router.push({
+    name: "my-property-detail",
+    params: {
+      propertyId: property.propertyId,
+    },
+  });
+};
+
 const openVerification = (property, mode) => router.push({
   name: "property-verification",
   params: { propertyId: property.propertyId, mode },
@@ -133,6 +142,7 @@ onMounted(initialize);
           v-for="property in store.items"
           :key="property.propertyId"
           :property="property"
+          @detail="openDetail"
           @edit="router.push(`/properties/${property.propertyId}/edit`)"
           @status="openStatus"
           @delete="openDelete"
@@ -234,5 +244,5 @@ onMounted(initialize);
 .property-dialog select,
 .property-dialog textarea { width: 100%; padding: 11px; border: 1px solid var(--zipda-color-border); border-radius: var(--zipda-radius-medium); }
 @media (max-width: 480px) { .property-dialog-backdrop { padding: 0; background: var(--zipda-color-white); } .property-dialog { width: 100%; max-height: 100dvh; min-height: 100dvh; border-radius: 0; } }
-@media (min-width: 768px) { .my-properties-content { width: min(100%, 900px); margin: 0 auto; } .property-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .property-list > :last-child { grid-column: 1 / -1; } }
+@media (min-width: 768px) { .my-properties-content { width: min(100%, 900px); margin: 0 auto; } .property-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }  }
 </style>

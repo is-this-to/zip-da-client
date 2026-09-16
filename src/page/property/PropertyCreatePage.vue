@@ -1,6 +1,6 @@
 <script setup>
 // 임호탁 파트 (매물 등록 1·2·5단계와 팀원 담당 3·4단계 연결 흐름)
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
@@ -30,6 +30,13 @@ const confirmedFacts = ref(false);
 const confirmedEvidence = ref(false);
 const step4ImageUploadBusy = ref(false);
 const step4 = ref(null);
+const hasVisitedStep4 = ref(false);
+
+watch(step, (currentStep) => {
+  if (currentStep === 4) {
+    hasVisitedStep4.value = true;
+  }
+});
 
 const form = ref({
   publisherType: "",
@@ -39,6 +46,9 @@ const form = ref({
   deposit: "",
   monthlyRent: "",
   maintenanceFee: "",
+  isParkingAvailable: false,
+  hasElevator: false,
+  isPetAllowed: false,
   supplyArea: "",
   exclusiveArea: "",
   roomCount: "",
@@ -78,9 +88,15 @@ const selectedOptionCount = computed(() =>
 const reviewPrice = computed(() => form.value.transactionType
   ? formatPropertyPrice({
       transactionType: form.value.transactionType,
-      salePrice: Number(form.value.salePrice || 0),
-      deposit: Number(form.value.deposit || 0),
-      monthlyRent: Number(form.value.monthlyRent || 0),
+      salePrice: form.value.salePrice !== "" && form.value.salePrice != null
+        ? Math.round(Number(form.value.salePrice) * 10_000)
+        : null,
+      deposit: form.value.deposit !== "" && form.value.deposit != null
+        ? Math.round(Number(form.value.deposit) * 10_000)
+        : null,
+      monthlyRent: form.value.monthlyRent !== "" && form.value.monthlyRent != null
+        ? Math.round(Number(form.value.monthlyRent) * 10_000)
+        : null,
     })
   : "-");
 const canSubmit = computed(() =>
@@ -188,7 +204,7 @@ const submit = async () => {
   try {
     const publisherType = form.value.publisherType;
     const created = await store.createProperty(buildRequest());
-    store.setRegistrationIntegration(null);
+    store.resetRegistrationDraft();
     if (publisherType === "DIRECT_OWNER" || publisherType === "DIRECT_TENANT") {
       await router.replace({
         name: "property-verification",
@@ -206,6 +222,7 @@ const submit = async () => {
 };
 
 onMounted(async () => {
+  store.resetRegistrationDraft();
   const access = await store.ensureAccess(["USER", "AGENT"]);
   if (access === "login") await router.replace("/sign-in");
 });
@@ -319,17 +336,6 @@ onMounted(async () => {
           @complete="completeLocationStep"
         />
 
-        <PropertyRegistrationStep4
-          v-else-if="step === 4"
-          ref="step4"
-          :property-type="form.propertyType"
-          :initial-file-ids="store.registrationIntegration?.fileIds ?? []"
-          :initial-options="store.registrationIntegration?.options ?? []"
-          :error-message="errors.integration"
-          @back="backFromStep4"
-          @busy-change="step4ImageUploadBusy = $event"
-          @complete="completeStep4"
-        />
         <template v-else-if="step === 5">
         <section class="review-complete" aria-label="등록 준비 완료">
           <span aria-hidden="true">✓</span>
@@ -372,6 +378,19 @@ onMounted(async () => {
           <MyButton :disabled="!canSubmit" :loading="store.pendingAction === 'create'" @click="submit">동의하고 등록</MyButton>
         </div>
         </template>
+
+        <PropertyRegistrationStep4
+          v-if="hasVisitedStep4"
+          v-show="step === 4"
+          ref="step4"
+          :property-type="form.propertyType"
+          :initial-file-ids="store.registrationIntegration?.fileIds ?? []"
+          :initial-options="store.registrationIntegration?.options ?? []"
+          :error-message="errors.integration"
+          @back="backFromStep4"
+          @busy-change="step4ImageUploadBusy = $event"
+          @complete="completeStep4"
+        />
       </template>
     </div>
   </section>

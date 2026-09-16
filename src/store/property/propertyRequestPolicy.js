@@ -75,6 +75,7 @@ export const isRegistrationBackDisabled = (step, imageUploadBusy) =>
 
 // 임호탁 파트 (팀원 담당 3·4단계 완료값을 매물 등록 API 계약으로 조합)
 const numberOrNull = (value) => value === "" || value == null ? null : Number(value);
+const toWonOrNull = (value) => value === "" || value == null ? null : Math.round(Number(value) * 10_000);
 
 export const createPropertyCreateRequest = (form, integration) => ({
   regionId: normalizePropertyId(integration.regionId),
@@ -82,12 +83,12 @@ export const createPropertyCreateRequest = (form, integration) => ({
   publisherType: form.publisherType,
   propertyType: form.propertyType,
   transactionType: form.transactionType,
-  salePrice: form.transactionType === "SALE" ? numberOrNull(form.salePrice) : null,
+  salePrice: form.transactionType === "SALE" ? toWonOrNull(form.salePrice) : null,
   deposit: ["JEONSE", "MONTHLY_RENT"].includes(form.transactionType)
-    ? numberOrNull(form.deposit)
+    ? toWonOrNull(form.deposit)
     : null,
-  monthlyRent: form.transactionType === "MONTHLY_RENT" ? numberOrNull(form.monthlyRent) : null,
-  maintenanceFee: numberOrNull(form.maintenanceFee),
+  monthlyRent: form.transactionType === "MONTHLY_RENT" ? toWonOrNull(form.monthlyRent) : null,
+  maintenanceFee: toWonOrNull(form.maintenanceFee),
   supplyArea: numberOrNull(form.supplyArea),
   exclusiveArea: numberOrNull(form.exclusiveArea),
   roomCount: numberOrNull(form.roomCount),
@@ -98,9 +99,9 @@ export const createPropertyCreateRequest = (form, integration) => ({
   direction: form.direction.trim() || null,
   approvalDate: form.approvalDate || null,
   buildingUse: form.buildingUse.trim() || null,
-  isParkingAvailable: form.isParkingAvailable,
-  hasElevator: form.hasElevator,
-  isPetAllowed: form.isPetAllowed,
+  isParkingAvailable: Boolean(form.isParkingAvailable),
+  hasElevator: Boolean(form.hasElevator),
+  isPetAllowed: Boolean(form.isPetAllowed),
   title: form.title.trim(),
   description: form.description.trim(),
   fileIds: integration.fileIds.map(normalizePropertyId),

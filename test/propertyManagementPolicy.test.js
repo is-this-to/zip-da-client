@@ -332,8 +332,12 @@ test("팀원 완료값 fixture를 등록 요청에 조합하며 폐기 옵션을
   assert.equal(typeof request.regionId, "string");
   assert.equal(typeof request.fileIds[0], "string");
   assert.equal(request.salePrice, null);
-  assert.equal(request.deposit, 1212);
-  assert.equal(request.monthlyRent, 12);
+  assert.equal(request.deposit, 12120000);
+  assert.equal(request.monthlyRent, 120000);
+  assert.equal(request.maintenanceFee, 80000);
+  assert.equal(request.isParkingAvailable, true);
+  assert.equal(request.hasElevator, true);
+  assert.equal(request.isPetAllowed, false);
   assert.equal(request.exclusiveArea, 108);
   assert.equal(request.floorCondition, "중층");
   assert.equal(request.title, "테스트 매물");

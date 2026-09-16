@@ -28,6 +28,7 @@ const syncOptions = () => {
 };
 
 const loadOptions = async () => {
+  if (!props.propertyType) return;
   const sequence = ++requestSequence;
   isLoading.value = true;
   errorMessage.value = "";

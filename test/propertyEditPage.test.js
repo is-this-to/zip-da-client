@@ -48,10 +48,10 @@ const detailFixture = {
   publisherType: "DIRECT_OWNER",
   propertyType: "APARTMENT",
   transactionType: "SALE",
-  salePrice: 50000,
+  salePrice: 500000000,
   deposit: null,
   monthlyRent: null,
-  maintenanceFee: 10,
+  maintenanceFee: 100000,
   supplyArea: 84.5,
   exclusiveArea: 59.9,
   roomCount: 3,
@@ -121,6 +121,8 @@ test("수정 화면은 권한 확인 후 상세 데이터를 입력 폼에 반�
   assert.equal(store.editDetail.propertyId, propertyId);
   assert.equal(state.form.title, "수정 전 제목");
   assert.equal(state.form.version, 3);
+  assert.equal(state.form.salePrice, 50000);
+  assert.equal(state.form.maintenanceFee, 10);
 });
 
 test("로그인이 필요하면 상세 조회 없이 로그인 화면으로 이동한다", async (t) => {
@@ -171,6 +173,7 @@ test("매물 수정은 중복 제출을 차단하고 최신 상세를 다시 조
   });
 
   state.form.title = "  수정된 제목  ";
+  state.form.salePrice = 55000;
   const firstSubmit = state.submit();
   const duplicateSubmit = state.submit();
   await new Promise((resolve) => setImmediate(resolve));
@@ -183,7 +186,7 @@ test("매물 수정은 중복 제출을 차단하고 최신 상세를 다시 조
   assert.equal(requests[0].headers.get("If-Match"), '"3"');
   assert.deepEqual(JSON.parse(requests[0].data), {
     version: 3,
-    changes: { title: "수정된 제목" },
+    changes: { title: "수정된 제목", salePrice: 550000000 },
   });
   assert.equal(getLoadCount(), 2);
   assert.equal(store.editDetail.version, 4);

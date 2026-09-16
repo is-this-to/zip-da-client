@@ -262,6 +262,18 @@ export const usePropertyManagementStore = defineStore("propertyManagementStore",
       : [];
   };
 
+  const resetRegistrationDraft = () => {
+    registrationIntegration.value = null;
+    try {
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.removeItem(CREATE_REQUEST_KEY);
+      }
+    } catch {
+      // ignore
+    }
+    clearFeedback();
+  };
+
   return {
     items,
     nextCursor,
@@ -286,6 +298,7 @@ export const usePropertyManagementStore = defineStore("propertyManagementStore",
     deleteProperty,
     submitVerification,
     setRegistrationIntegration,
+    resetRegistrationDraft,
     setVerificationEvidence,
     clearFeedback,
   };

@@ -23,15 +23,26 @@ const editableFields = [
   "isParkingAvailable", "hasElevator", "isPetAllowed", "title", "description",
 ];
 
+const priceFields = new Set([
+  "salePrice", "deposit", "monthlyRent", "maintenanceFee",
+]);
+
 const numericFields = new Set([
   "salePrice", "deposit", "monthlyRent", "maintenanceFee", "supplyArea",
   "exclusiveArea", "roomCount", "bathroomCount", "floor", "totalFloor",
 ]);
 
+const toWon = (value) => (value === "" || value == null ? null : Math.round(Number(value) * 10_000));
+const toManWon = (value) => (value === "" || value == null ? "" : Math.round(Number(value) / 10_000));
+
 const hydrate = (detail) => {
   form.value = { ...detail };
   for (const field of editableFields) {
-    if (form.value[field] == null) form.value[field] = "";
+    if (form.value[field] == null) {
+      form.value[field] = "";
+    } else if (priceFields.has(field) && form.value[field] !== "") {
+      form.value[field] = toManWon(form.value[field]);
+    }
   }
   original = { ...form.value };
 };
@@ -53,19 +64,20 @@ const buildChanges = () => {
   const changes = Object.fromEntries(editableFields
     .filter((field) => form.value[field] !== original[field])
     .map((field) => {
-    const value = form.value[field];
-    if (value === "") return [field, null];
-    if (numericFields.has(field)) return [field, Number(value)];
-    return [field, typeof value === "string" ? value.trim() : value];
+      const value = form.value[field];
+      if (value === "") return [field, null];
+      if (priceFields.has(field)) return [field, toWon(value)];
+      if (numericFields.has(field)) return [field, Number(value)];
+      return [field, typeof value === "string" ? value.trim() : value];
     }));
 
   if (form.value.transactionType !== original.transactionType) {
-    changes.salePrice = form.value.transactionType === "SALE" ? Number(form.value.salePrice) : null;
+    changes.salePrice = form.value.transactionType === "SALE" ? toWon(form.value.salePrice) : null;
     changes.deposit = ["JEONSE", "MONTHLY_RENT"].includes(form.value.transactionType)
-      ? Number(form.value.deposit)
+      ? toWon(form.value.deposit)
       : null;
     changes.monthlyRent = form.value.transactionType === "MONTHLY_RENT"
-      ? Number(form.value.monthlyRent)
+      ? toWon(form.value.monthlyRent)
       : null;
   }
   return changes;
