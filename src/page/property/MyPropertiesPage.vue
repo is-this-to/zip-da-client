@@ -66,6 +66,8 @@ const closeDialog = () => {
 };
 
 const submitStatus = async () => {
+  // 임호탁 파트 (거래 상태 변경 중복 제출 차단)
+  if (store.isActionLoading || !selectedProperty.value) return;
   if (!reason.value.trim()) {
     localError.value = "변경 사유를 입력해 주세요.";
     return;
@@ -74,6 +76,7 @@ const submitStatus = async () => {
     localError.value = "변경할 수 있는 거래 상태를 선택해 주세요.";
     return;
   }
+  localError.value = "";
   try {
     await store.changeTransactionStatus(selectedProperty.value, targetStatus.value, reason.value);
     closeDialog();
