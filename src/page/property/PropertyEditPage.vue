@@ -72,6 +72,8 @@ const buildChanges = () => {
 };
 
 const submit = async () => {
+  // 임호탁 파트 (매물 수정 중복 제출 및 상세 조회 전 제출 차단)
+  if (store.isActionLoading || !original) return;
   errors.value = validatePropertyCore(form.value);
   if (Object.keys(errors.value).length > 0) return;
   const changes = buildChanges();
