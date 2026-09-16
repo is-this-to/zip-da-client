@@ -51,7 +51,7 @@ after(async () => {
   await server?.close();
 });
 
-const mountCreatePage = async (t) => {
+const mountCreatePage = async (t, { replace } = {}) => {
   const pinia = createPinia();
   const store = useStore(pinia);
   store.ensureAccess = async () => "allowed";
@@ -61,7 +61,7 @@ const mountCreatePage = async (t) => {
   app.provide(ssrContextKey, {});
   app.provide(routeLocationKey, reactive({}));
   app.provide(routerKey, {
-    replace: async (path) => navigations.push({ type: "replace", path }),
+    replace: replace ?? (async (path) => navigations.push({ type: "replace", path })),
     push: async (path) => navigations.push({ type: "push", path }),
   });
   const instance = app.mount({});
@@ -212,4 +212,61 @@ test("B. 새 등록 페이지 시작 시 이전 registration draft는 초기화�
   });
   const { store: mountedStore } = await mountCreatePage(t);
   assert.equal(mountedStore.registrationIntegration, null);
+});
+
+test("C. 매물 생성 성공 후 화면 이동이 실패해도 완료 상태를 유지하고 중복 등록을 막는다", async (t) => {
+  const navigations = [];
+  const { state, store } = await mountCreatePage(t, {
+    replace: async (path) => {
+      navigations.push(path);
+      throw new Error("navigation failed");
+    },
+  });
+  let createCalls = 0;
+  store.createProperty = async () => {
+    createCalls += 1;
+    return { propertyId: "884685586571263799", version: 0 };
+  };
+
+  Object.assign(state.form, {
+    publisherType: "DIRECT_OWNER",
+    propertyType: "APARTMENT",
+    transactionType: "SALE",
+    salePrice: "50000",
+    exclusiveArea: "84",
+    title: "등록 성공 화면 전환 테스트",
+    description: "매물 생성과 화면 이동 결과를 분리한다.",
+  });
+  store.setRegistrationIntegration({
+    regionId: "4065",
+    apartmentComplexId: "4423",
+    address: {
+      roadAddress: "대구광역시 수성구 달구벌대로 2450",
+      jibunAddress: "대구광역시 수성구 범어동 123",
+      legalDongCode: "2726010100",
+      longitude: 128.625123,
+      latitude: 35.859321,
+    },
+    fileIds: ["884685586571263798"],
+    options: [],
+  });
+  state.confirmedFacts = true;
+  state.confirmedEvidence = true;
+
+  await state.submit();
+  await state.submit();
+
+  assert.equal(createCalls, 1);
+  assert.equal(state.registrationCompleted, true);
+  assert.equal(state.createdPropertyId, "884685586571263799");
+  assert.equal(state.canSubmit, false);
+  assert.match(state.completionNavigationError, /매물 등록은 완료/);
+  assert.equal(navigations.length, 1);
+  assert.deepEqual(navigations[0], {
+    name: "property-verification",
+    params: {
+      propertyId: "884685586571263799",
+      mode: "owner",
+    },
+  });
 });
