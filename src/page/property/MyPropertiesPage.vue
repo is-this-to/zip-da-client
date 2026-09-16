@@ -84,10 +84,13 @@ const submitStatus = async () => {
 };
 
 const submitDelete = async () => {
+  // 임호탁 파트 (매물 소프트 삭제 중복 제출 차단)
+  if (store.isActionLoading || !selectedProperty.value) return;
   if (!reason.value.trim()) {
     localError.value = "삭제 사유를 입력해 주세요.";
     return;
   }
+  localError.value = "";
   try {
     await store.deleteProperty(selectedProperty.value, reason.value);
     closeDialog();
