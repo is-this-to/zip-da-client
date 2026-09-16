@@ -101,11 +101,8 @@ onMounted(initialize);
 
 <template>
   <section class="page my-properties-page">
-    <Header title="내 매물">
-      <template #action>
-        <Header title="내 매물" />
-      </template>
-    </Header>
+    <!-- 임호탁 파트 (내 매물 목록 단일 공통 헤더) -->
+    <Header title="내 매물" />
 
     <div class="page-content my-properties-content">
       <div class="my-properties-intro">
@@ -207,7 +204,6 @@ onMounted(initialize);
 .my-properties-content,
 .property-list { display: grid; gap: 16px; }
 .my-properties-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.header-add { width: 40px; height: 40px; background: transparent; border: 0; font-size: 25px; cursor: pointer; }
 .property-state,
 .empty-state { padding: 48px 20px; color: var(--zipda-color-text-muted); text-align: center; }
 .empty-state { display: grid; justify-items: center; gap: 12px; }
