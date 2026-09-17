@@ -5,7 +5,6 @@ defineProps({
     default: () => [
       { to: "/main", label: "홈", icon: "/icon/main/nav-home.svg" },
       { to: "/properties/search", label: "검색", icon: "/icon/main/nav-search.svg" },
-      { to: "/properties", label: "매물", icon: "/icon/main/nav-property.svg" },
       { to: "/favorites", label: "찜", icon: "/icon/main/nav-favorite.svg" },
       { to: "/members/me", label: "마이페이지", icon: "/icon/main/nav-mypage.svg" },
     ],
