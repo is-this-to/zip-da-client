@@ -9,6 +9,7 @@ export const useFileStore = defineStore("fileStore", () => {
     return (
       await myAxios.post("/api/member/files/profiles", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 30000,
       })
     ).data.data;
   };

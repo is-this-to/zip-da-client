@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
+import { useFileStore } from "../../store/file/useFileStore.js";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
@@ -15,6 +16,7 @@ import {
 
 const router = useRouter();
 const authStore = useAuthStore();
+const fileStore = useFileStore();
 const step = ref(1);
 const terms = ref([]);
 const agreed = reactive({});
@@ -322,6 +324,13 @@ const signup = async () => {
   }
   try {
     submitting.value = true;
+    formError.value = "";
+
+    let profileFileId = null;
+    if (form.profile) {
+      const uploadedProfile = await fileStore.uploadProfile(form.profile);
+      profileFileId = String(uploadedProfile.fileId);
+    }
 
     await authStore.registration({
       email: form.email,
@@ -331,13 +340,13 @@ const signup = async () => {
       name: form.name.trim(),
       nickname: form.nickname.trim(),
       phone: phone(),
-      profileFileId: null,
+      profileFileId,
       termsAgreements: terms.value.map((term) => ({
         termsId: term.termId,
         version: term.termVersion,
         agreed: agreed[term.termId] === true,
       })),
-    }, form.profile);
+    });
     router.replace("/sign-in");
   } catch (error) {
     formError.value = getApiErrorMessage(
