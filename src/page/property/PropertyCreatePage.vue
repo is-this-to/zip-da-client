@@ -475,7 +475,7 @@ onMounted(async () => {
 .confirmation { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.5; }
 .confirmation input { margin-top: 3px; accent-color: var(--zipda-color-primary); }
 .error-box { display: grid; gap: 6px; }
-.create-actions { position: sticky; bottom: 0; z-index: 10; margin: 0 calc(var(--zipda-page-padding) * -1) -40px; padding: 12px var(--zipda-page-padding) calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgb(255 255 255 / 75%), var(--zipda-color-white) 24%); }
+.create-actions { position: sticky; bottom: 0; z-index: 10; width: calc(100% + var(--zipda-page-padding) + var(--zipda-page-padding)); margin: 0 calc(var(--zipda-page-padding) * -1) -40px; padding: 12px var(--zipda-page-padding) calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgb(255 255 255 / 75%), var(--zipda-color-white) 24%); }
 .create-actions--single { display: block; }
 @media (min-width: 768px) { .property-create-content { width: min(100%, 760px); margin: 0 auto; } }
 @media (max-width: 480px) { .review-card dl { grid-template-columns: 1fr; } }
