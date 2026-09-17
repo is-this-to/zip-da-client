@@ -70,5 +70,5 @@ defineExpose({ currentPatch });
 
 <style scoped>
 .registration-step4 { display: grid; gap: 26px; }
-.step4-actions { position: sticky; bottom: 0; z-index: 10; margin: 0 calc(var(--zipda-page-padding) * -1) -40px; padding: 12px var(--zipda-page-padding) calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgb(255 255 255 / 75%), var(--zipda-color-white) 24%); }
+.step4-actions { position: sticky; bottom: 0; z-index: 10; width: calc(100% + var(--zipda-page-padding) + var(--zipda-page-padding)); margin: 0 calc(var(--zipda-page-padding) * -1) -40px; padding: 12px var(--zipda-page-padding) calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgb(255 255 255 / 75%), var(--zipda-color-white) 24%); }
 </style>

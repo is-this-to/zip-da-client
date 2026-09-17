@@ -1,8 +1,12 @@
 <script setup>
+import { onMounted, ref } from "vue";
 import Header from "../../component/Header.vue";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
+import { usePopularPropertyStore } from "../../store/main/usePopularPropertyStore.js";
+import { formatPropertyPrice } from "../../util/property/formatPropertyPrice.js";
 
 const authStore = useAuthStore();
+const popularPropertyStore = usePopularPropertyStore();
 
 const categoryItems = [
   {
@@ -20,40 +24,41 @@ const categoryItems = [
   { label: "관심", icon: "/icon/main/favorite-menu.svg", to: "/favorites" },
 ];
 
-const regions = ["전국", "서울", "부산", "대구", "인천", "대전"];
-
-const risingComplexes = [
-  {
-    rank: 1,
-    name: "그랑시티자이 (주상복합)",
-    description: "경기 안산시 상록구 · 3,728세대 · 6년차",
-    price: "35평 | 실 6억 6,500만원",
-  },
-  {
-    rank: 2,
-    name: "힐스테이트라피아노삼송1단지 (도시형)",
-    description: "경기 고양시 덕양구 · 277세대 · 3년차",
-    price: "33평 | 실 8억 1,000만원",
-  },
-  {
-    rank: 3,
-    name: "어울림하트",
-    description: "대전 유성구 · 1,056세대 · 15년차",
-    price: "34평 | 실 5억 1,500만원",
-  },
-  {
-    rank: 4,
-    name: "진주초전푸르지오2단지",
-    description: "경남 진주시 · 830세대 · 16년차",
-    price: "46평 | 실 5억 8,000만원",
-  },
-  {
-    rank: 5,
-    name: "반정아이파크캐슬5단지",
-    description: "경기 화성시 병점구 · 1,378세대 · 4년차",
-    price: "33평 | 실 9억 2,000만원",
-  },
+const regions = [
+  { value: "ALL", label: "전국" },
+  { value: "SEOUL", label: "서울" },
+  { value: "BUSAN", label: "부산" },
+  { value: "DAEGU", label: "대구" },
+  { value: "INCHEON", label: "인천" },
+  { value: "GWANGJU", label: "광주" },
+  { value: "DAEJEON", label: "대전" },
+  { value: "ULSAN", label: "울산" },
+  { value: "SEJONG", label: "세종" },
 ];
+
+const propertyTypeLabels = {
+  APARTMENT: "아파트",
+  OFFICETEL: "오피스텔",
+  VILLA: "빌라",
+  ROOM: "원룸·투룸",
+};
+const selectedRegion = ref("ALL");
+
+const selectRegion = (region) => {
+  if (selectedRegion.value === region) return;
+  selectedRegion.value = region;
+  popularPropertyStore.fetchPopularProperties(region);
+};
+
+const formatArea = (area) => {
+  const value = Number(area);
+  if (!Number.isFinite(value)) return "면적 정보 없음";
+  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}㎡`;
+};
+
+onMounted(() =>
+  popularPropertyStore.fetchPopularProperties(selectedRegion.value),
+);
 </script>
 
 <template>
@@ -116,10 +121,6 @@ const risingComplexes = [
 
     <div class="main-divider" aria-hidden="true"></div>
 
-    <!--
-      하단 리스트는 아직 확정되지 않은 영역.
-      API를 연결하지 않고 Figma 형태 확인용 정적 샘플만 둔다.
-    -->
     <section class="rising-section" aria-labelledby="rising-title">
       <div class="rising-section__heading">
         <img
@@ -128,45 +129,94 @@ const risingComplexes = [
           alt=""
           aria-hidden="true"
         />
-        <h2 id="rising-title">인기 급상승 단지</h2>
+        <h2 id="rising-title">찜 많은 인기 매물</h2>
       </div>
 
       <div class="region-tabs" role="tablist" aria-label="지역">
         <button
-          v-for="(region, index) in regions"
-          :key="region"
+          v-for="region in regions"
+          :key="region.value"
           type="button"
           class="region-tab"
-          :class="{ 'region-tab--active': index === 0 }"
+          :class="{ 'region-tab--active': selectedRegion === region.value }"
           role="tab"
-          :aria-selected="index === 0"
+          :aria-selected="selectedRegion === region.value"
+          @click="selectRegion(region.value)"
         >
-          {{ region }}
+          {{ region.label }}
         </button>
       </div>
 
-      <ol class="complex-list">
+      <div
+        v-if="popularPropertyStore.loading"
+        class="ranking-state"
+        role="status"
+      >
+        인기 매물을 불러오고 있어요.
+      </div>
+      <div
+        v-else-if="popularPropertyStore.errorMessage"
+        class="ranking-state ranking-state--error"
+        role="alert"
+      >
+        <span>{{ popularPropertyStore.errorMessage }}</span>
+        <button
+          type="button"
+          @click="popularPropertyStore.fetchPopularProperties(selectedRegion)"
+        >
+          다시 시도
+        </button>
+      </div>
+      <div
+        v-else-if="popularPropertyStore.items.length === 0"
+        class="ranking-state"
+      >
+        이 지역에는 아직 찜을 받은 매물이 없어요.
+      </div>
+
+      <ol v-else class="complex-list">
         <li
-          v-for="item in risingComplexes"
-          :key="item.rank"
+          v-for="(item, index) in popularPropertyStore.items"
+          :key="item.propertyId"
           class="complex-item"
         >
-          <span class="complex-item__rank">{{ item.rank }}</span>
+          <span class="complex-item__rank">{{ index + 1 }}</span>
 
-          <div class="complex-item__content">
-            <h3 class="complex-item__name">{{ item.name }}</h3>
-            <p class="complex-item__description">{{ item.description }}</p>
-            <p class="complex-item__price">{{ item.price }}</p>
-          </div>
+          <RouterLink
+            class="complex-item__content"
+            :to="`/properties/${item.propertyId}`"
+          >
+            <h3 class="complex-item__name">{{ item.title }}</h3>
+            <p class="complex-item__description">
+              {{ item.locationSummary }} ·
+              {{ propertyTypeLabels[item.propertyType] ?? "매물" }} · 찜
+              {{ item.favoriteCount.toLocaleString("ko-KR") }}개
+            </p>
+            <p class="complex-item__price">
+              {{ formatArea(item.exclusiveArea) }} |
+              {{ formatPropertyPrice(item) }}
+            </p>
+          </RouterLink>
 
-          <div class="complex-item__thumbnail" aria-hidden="true"></div>
+          <RouterLink
+            class="complex-item__thumbnail"
+            :to="`/properties/${item.propertyId}`"
+            :aria-label="`${item.title} 상세 보기`"
+          >
+            <img
+              v-if="item.representativeImageUrl"
+              :src="item.representativeImageUrl"
+              :alt="`${item.title} 대표 사진`"
+            />
+            <span v-else aria-hidden="true">⌂</span>
+          </RouterLink>
         </li>
       </ol>
 
-      <button type="button" class="more-button">
+      <RouterLink to="/properties/search" class="more-button">
         <span>더보기</span>
         <img src="/icon/main/chevron-down.svg" alt="" aria-hidden="true" />
-      </button>
+      </RouterLink>
     </section>
   </section>
 </template>
@@ -363,6 +413,7 @@ const risingComplexes = [
 .complex-item__content {
   flex: 1 1 auto;
   min-width: 0;
+  text-decoration: none;
 }
 
 .complex-item__name {
@@ -389,10 +440,45 @@ const risingComplexes = [
 
 .complex-item__thumbnail {
   flex: 0 0 64px;
+  display: grid;
+  place-items: center;
   width: 64px;
   height: 64px;
+  overflow: hidden;
+  color: var(--zipda-color-primary);
   background: linear-gradient(135deg, #efeee9 0%, #dde5d4 100%);
   border-radius: 8px;
+  font-size: 24px;
+  text-decoration: none;
+}
+
+.complex-item__thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ranking-state {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  min-height: 180px;
+  margin: 0 20px;
+  padding: 24px;
+  color: var(--zipda-color-text-muted);
+  background: #f7f7f3;
+  border-radius: 12px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.ranking-state--error button {
+  padding: 7px 12px;
+  color: var(--zipda-color-primary-active);
+  background: var(--zipda-color-white);
+  border: 1px solid var(--zipda-color-border);
+  border-radius: 999px;
+  cursor: pointer;
 }
 
 .more-button {
@@ -411,6 +497,7 @@ const risingComplexes = [
   border: 0;
   border-radius: 8px;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .more-button img {

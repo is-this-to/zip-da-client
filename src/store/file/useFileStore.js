@@ -3,14 +3,22 @@ import myAxios from "../../api/myAxios";
 
 export const useFileStore = defineStore("fileStore", () => {
   const uploadProfile = async (file) => {
-    const formData = new FormData();
-    formData.append("file", file);
+    try {
+      const url = "/api/member/files/profiles";
 
-    return (
-      await myAxios.post("/api/member/files/profiles", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })
-    ).data.data;
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const config = {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      };
+      const res = await myAxios.post(url, formData, config);
+      return res.data.data.fileId;
+    } catch {
+      return null;
+    }
   };
 
   return { uploadProfile };
