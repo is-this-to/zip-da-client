@@ -15,8 +15,6 @@ env:
   MANIFEST_REPO: is-this-to/zip-da-k8s-manifest
   # 해당 매니페스트 레파지토리의 경로
   MANIFEST_PATH: zip-da-client
-  VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-  VITE_KAKAO_MAP_APP_KEY: ${{ secrets.VITE_KAKAO_MAP_APP_KEY }}
 
 # 해당 워크플로우가 실행 중 GITHUB_TOKEN에 부여할 권한 설정
 permissions:
@@ -45,6 +43,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push image
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_KAKAO_MAP_APP_KEY: ${{ secrets.VITE_KAKAO_MAP_APP_KEY }}
         # 아래 셸 명령들을 순서대로 실행
         # 이미지 전체 경로 조립: ghcr.io/계정명/이미지이름 (계정명은 반드시 소문자로 설정)
         # 이번 워크플로우 실행 번호를 태그로 사용해 빌드 (이때, env 값들도 arg로 추가)
