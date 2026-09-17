@@ -383,6 +383,7 @@ onBeforeUnmount(() => {
   position: sticky;
   bottom: 0;
   z-index: 10;
+  width: calc(100% + var(--zipda-page-padding) + var(--zipda-page-padding));
   margin: 0 calc(var(--zipda-page-padding) * -1) -40px;
   padding: 12px var(--zipda-page-padding) calc(12px + env(safe-area-inset-bottom));
   background: linear-gradient(

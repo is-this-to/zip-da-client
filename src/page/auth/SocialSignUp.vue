@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
-import memberMessage from "../../constants/memberMessage.js";
+import memberMessage from "../../constant/member/memberMessage.js";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 
 const router = useRouter();
