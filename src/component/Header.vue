@@ -1,4 +1,5 @@
 <script setup>
+import { getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({
@@ -25,10 +26,17 @@ const props = defineProps({
 })
 
 const router = useRouter()
+const emit = defineEmits(['back'])
+const instance = getCurrentInstance()
 
 const goBack = () => {
   if (props.backTo) {
     router.push(props.backTo)
+    return
+  }
+
+  if (instance?.vnode.props?.onBack) {
+    emit('back')
     return
   }
 

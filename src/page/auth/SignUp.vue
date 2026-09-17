@@ -2,12 +2,12 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
-import { useFileStore } from "../../store/file/useFileStore.js";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
 import MyFileInput from "../../component/input/MyFileInput.vue";
-import memberMessage from "../../constants/memberMessage.js";
+import memberMessage from "../../constant/member/memberMessage.js";
+import { getApiErrorMessage } from "../../constant/error/apiErrorMessage.js";
 import {
   email as emailRule,
   password as passwordRule,
@@ -15,14 +15,12 @@ import {
 
 const router = useRouter();
 const authStore = useAuthStore();
-const fileStore = useFileStore();
 const step = ref(1);
 const terms = ref([]);
 const agreed = reactive({});
 const selectedTerm = ref(null);
 const termsError = ref("");
 const submitting = ref(false);
-const profileUploading = ref(false);
 const preview = ref("");
 const formError = ref("");
 const form = reactive({
@@ -33,7 +31,6 @@ const form = reactive({
   name: "",
   phone: "",
   profile: null,
-  profileFileId: null,
 });
 const checked = reactive({
   email: { value: "", available: false, message: "" },
@@ -49,6 +46,23 @@ const verification = reactive({
   message: "",
   resendNeeded: false,
 });
+const verificationRemainingSeconds = ref(0);
+let verificationTimer = null;
+const PROFILE_IMAGE_MAX_SIZE = 10 * 1024 * 1024;
+const PROFILE_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
+const PROFILE_IMAGE_EXTENSIONS = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "webp",
+]);
 
 const requiredTermsAgreed = computed(() =>
   terms.value
@@ -78,39 +92,80 @@ const phone = () => form.phone.replace(/\D/g, "");
 const profileReady = computed(
   () => form.name.trim().length >= 2 && /^01[016789]\d{7,8}$/.test(phone()),
 );
+const signupReady = computed(() => profileReady.value && !submitting.value);
+const verificationRemainingTime = computed(() => {
+  const minutes = Math.floor(verificationRemainingSeconds.value / 60);
+  const seconds = verificationRemainingSeconds.value % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+});
 const stepName = computed(
   () =>
     ["약관 동의", "로그인 정보 입력", "이메일 인증", "기본 정보 입력"][
       step.value - 1
     ],
 );
-const handleChangeProfile = async (event) => {
-  const file = event?.target?.files?.[0];
-  if (!file) {
-    if (preview.value) URL.revokeObjectURL(preview.value);
-    preview.value = "";
-    form.profileFileId = null;
-    return;
-  }
 
+const clearVerificationTimer = () => {
+  if (verificationTimer) {
+    window.clearInterval(verificationTimer);
+    verificationTimer = null;
+  }
+};
+
+const startVerificationTimer = (expiresInSeconds) => {
+  clearVerificationTimer();
+  verificationRemainingSeconds.value = Number(expiresInSeconds) || 5 * 60;
+  verificationTimer = window.setInterval(() => {
+    verificationRemainingSeconds.value = Math.max(
+      verificationRemainingSeconds.value - 1,
+      0,
+    );
+    if (verificationRemainingSeconds.value === 0) {
+      clearVerificationTimer();
+      verification.verified = false;
+      verification.resendNeeded = true;
+      verification.message = "인증 시간이 만료되었어요. 새 인증번호를 요청해 주세요.";
+    }
+  }, 1000);
+};
+const clearProfile = () => {
   if (preview.value) {
     URL.revokeObjectURL(preview.value);
   }
-  preview.value = URL.createObjectURL(file);
-  form.profileFileId = null;
+  preview.value = "";
+  form.profile = null;
+};
 
-  try {
-    profileUploading.value = true;
-    const uploadedFile = await fileStore.uploadProfile(file);
-    form.profileFileId = uploadedFile.fileId;
-    formError.value = "";
-  } catch {
-    formError.value = memberMessage.getMemberMessage(
-      "PROFILE_IMAGE_UPLOAD_ERROR",
-    );
-  } finally {
-    profileUploading.value = false;
+const handleChangeProfile = (event) => {
+  const file = event?.target?.files?.[0];
+  if (!file) {
+    clearProfile();
+    return;
   }
+
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const validType = PROFILE_IMAGE_TYPES.has(file.type.toLowerCase());
+  const validExtension = PROFILE_IMAGE_EXTENSIONS.has(extension);
+
+  if (!validType || !validExtension) {
+    event.target.value = "";
+    clearProfile();
+    formError.value =
+      "프로필 사진은 JPG, JPEG, PNG, GIF, WEBP 파일만 선택할 수 있습니다.";
+    return;
+  }
+
+  if (file.size > PROFILE_IMAGE_MAX_SIZE) {
+    event.target.value = "";
+    clearProfile();
+    formError.value = "프로필 사진은 10MB 이하만 선택할 수 있습니다.";
+    return;
+  }
+
+  if (preview.value) URL.revokeObjectURL(preview.value);
+  preview.value = URL.createObjectURL(file);
+  form.profile = file;
+  formError.value = "";
 };
 
 const loadTerms = async () => {
@@ -119,8 +174,11 @@ const loadTerms = async () => {
     terms.value.forEach((term) => {
       agreed[term.termId] = false;
     });
-  } catch {
-    termsError.value = memberMessage.getMemberMessage("TERMS_LOAD_ERROR");
+  } catch (error) {
+    termsError.value = getApiErrorMessage(
+      error,
+      memberMessage.getMemberMessage("TERMS_LOAD_ERROR"),
+    );
   }
 };
 
@@ -157,9 +215,10 @@ const checkDuplicate = async (field) => {
     checked[field].message = result.available
       ? "사용할 수 있습니다."
       : "이미 사용 중인 정보입니다.";
-  } catch {
-    checked[field].message = memberMessage.getMemberMessage(
-      "DUPLICATE_CHECK_ERROR",
+  } catch (error) {
+    checked[field].message = getApiErrorMessage(
+      error,
+      memberMessage.getMemberMessage("DUPLICATE_CHECK_ERROR"),
     );
   } finally {
     checking.value = "";
@@ -192,9 +251,13 @@ const sendVerification = async () => {
     });
     verification.id = result.verificationId;
     formError.value = "";
+    startVerificationTimer(result.expiresInSeconds);
     step.value = 3;
-  } catch {
-    formError.value = memberMessage.getMemberMessage("EMAIL_CODE_SEND_ERROR");
+  } catch (error) {
+    formError.value = getApiErrorMessage(
+      error,
+      memberMessage.getMemberMessage("EMAIL_CODE_SEND_ERROR"),
+    );
   } finally {
     verification.sending = false;
   }
@@ -211,9 +274,11 @@ const resendVerification = async () => {
       message: "새 인증번호를 이메일로 보냈습니다.",
       resendNeeded: false,
     });
-  } catch {
-    verification.message = memberMessage.getMemberMessage(
-      "EMAIL_CODE_RESEND_ERROR",
+    startVerificationTimer(result.expiresInSeconds);
+  } catch (error) {
+    verification.message = getApiErrorMessage(
+      error,
+      memberMessage.getMemberMessage("EMAIL_CODE_RESEND_ERROR"),
     );
   } finally {
     verification.sending = false;
@@ -236,9 +301,13 @@ const verifyCode = async () => {
     verification.message = verification.verified
       ? "이메일 인증이 완료되었습니다."
       : "인증번호를 확인해 주세요.";
-  } catch {
-    verification.message = memberMessage.getMemberMessage(
-      "EMAIL_CODE_VERIFY_ERROR",
+    if (verification.verified) {
+      clearVerificationTimer();
+    }
+  } catch (error) {
+    verification.message = getApiErrorMessage(
+      error,
+      memberMessage.getMemberMessage("EMAIL_CODE_VERIFY_ERROR"),
     );
     verification.resendNeeded = true;
   } finally {
@@ -247,16 +316,13 @@ const verifyCode = async () => {
 };
 
 const signup = async () => {
-  if (profileUploading.value) {
-    formError.value = "프로필 사진 업로드가 끝날 때까지 기다려 주세요.";
-    return;
-  }
   if (!profileReady.value || submitting.value) {
     formError.value = "이름과 올바른 휴대전화 번호를 입력해 주세요.";
     return;
   }
   try {
     submitting.value = true;
+
     await authStore.registration({
       email: form.email,
       verificationId: verification.id,
@@ -265,33 +331,44 @@ const signup = async () => {
       name: form.name.trim(),
       nickname: form.nickname.trim(),
       phone: phone(),
-      profileFileId:
-        form.profileFileId == null ? null : String(form.profileFileId),
+      profileFileId: null,
       termsAgreements: terms.value.map((term) => ({
         termsId: term.termId,
         version: term.termVersion,
         agreed: agreed[term.termId] === true,
       })),
-    });
+    }, form.profile);
     router.replace("/sign-in");
-  } catch {
-    formError.value = memberMessage.getMemberMessage("SIGN_UP_ERROR");
+  } catch (error) {
+    formError.value = getApiErrorMessage(
+      error,
+      memberMessage.getMemberMessage("SIGN_UP_ERROR"),
+    );
   } finally {
     submitting.value = false;
   }
 };
 
-const goBack = () =>
-  step.value === 1 ? router.push("/sign-in") : step.value--;
+const goBack = () => {
+  if (step.value === 1) {
+    router.push("/sign-in");
+    return;
+  }
+  if (step.value === 3) {
+    clearVerificationTimer();
+  }
+  step.value--;
+};
 onMounted(loadTerms);
 onBeforeUnmount(() => {
+  clearVerificationTimer();
   if (preview.value) URL.revokeObjectURL(preview.value);
 });
 </script>
 
 <template>
   <section class="page sign-up-page">
-    <Header title="회원가입" show-back @click="goBack" />
+    <Header title="회원가입" show-back @back="goBack" />
     <div class="progress">
       <span
         v-for="number in 4"
@@ -312,7 +389,9 @@ onBeforeUnmount(() => {
             >인증번호를<br />입력해 주세요</template
           ><template v-else>기본 정보를 입력해 주세요</template>
         </h1>
-        <small v-if="step === 3">{{ form.email }}로 인증번호를 보냈어요.</small
+        <small v-if="step === 3"
+          >{{ form.email }}로 인증번호를 보냈어요.<br />
+          인증번호는 5분 이내에 입력해 주세요. (남은 시간 {{ verificationRemainingTime }})</small
         ><small v-else-if="step === 4">프로필 사진은 선택 사항입니다.</small>
       </header>
 
@@ -494,11 +573,11 @@ onBeforeUnmount(() => {
             v-model="form.profile"
             label="프로필 사진"
             button-text="이미지 선택"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            :max-size="10485760"
-            :disabled="profileUploading"
+            accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
+            :max-size="PROFILE_IMAGE_MAX_SIZE"
+            :disabled="submitting"
             @change="handleChangeProfile"
-            helper-text="선택 사항 · 최대 10MB"
+            helper-text="선택 사항 · JPG, JPEG, PNG, GIF, WEBP · 최대 10MB"
           />
         </div>
         <MyInput
@@ -520,7 +599,7 @@ onBeforeUnmount(() => {
             type="submit"
             block
             size="large"
-            :disabled="!profileReady || profileUploading"
+            :disabled="!signupReady"
             :loading="submitting"
             loading-text="가입 처리 중"
             >가입 완료</MyButton

@@ -102,8 +102,22 @@ export const useAuthStore = defineStore("authStore", () => {
       )
     ).data.data;
 
-  const registration = async (newMemberData) =>
-    (await myAxios.post("/api/member", newMemberData)).data.data;
+  const registration = async (newMemberData, profile = null) => {
+    const formData = new FormData();
+    formData.append(
+      "request",
+      new Blob([JSON.stringify(newMemberData)], { type: "application/json" }),
+    );
+    if (profile) {
+      formData.append("profile", profile);
+    }
+
+    return (
+      await myAxios.post("/api/member", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+    ).data.data;
+  };
 
   const startKakaoLogin = () => {
     const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(
