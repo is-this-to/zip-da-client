@@ -20,6 +20,7 @@ import RegionSelector from "../../component/region/RegionSelector.vue";
 import PropertyMapList from "../../component/property/PropertyMapList.vue";
 import PropertyMapFilterPanel from "../../component/property/PropertyMapFilterPanel.vue";
 import { getAppliedPropertyMapFilterChips } from "../../util/property/propertyMapFilter.js";
+import { getApiErrorMessage } from "../../constant/error/apiErrorMessage.js";
 
 const router = useRouter();
 const regionStore = useRegionStore();
@@ -158,8 +159,10 @@ const handleError = (error) => {
   /**
    * 그 외 오류는 지도 화면 안에 표시한다.
    */
-  inlineErrorMessage.value =
-    error?.response?.data?.message ?? "지역 정보를 불러오지 못했습니다.";
+  inlineErrorMessage.value = getApiErrorMessage(
+    error,
+    "지역 정보를 불러오지 못했습니다.",
+  );
 };
 
 /**
@@ -175,8 +178,10 @@ const handleSearchError = (error) => {
     return;
   }
 
-  searchErrorMessage.value =
-    error?.response?.data?.message ?? "지역 검색 결과를 불러오지 못했습니다.";
+  searchErrorMessage.value = getApiErrorMessage(
+    error,
+    "지역 검색 결과를 불러오지 못했습니다.",
+  );
 };
 
 /**
@@ -802,7 +807,10 @@ onBeforeUnmount(() => {
       <!-- 지도 상단 검색 영역 -->
       <div
         class="map-top-overlay"
-        :class="{ 'map-top-overlay--selector-open': isRegionSelectorOpen }"
+        :class="{
+          'map-top-overlay--selector-open': isRegionSelectorOpen,
+          'map-top-overlay--filter-open': isFilterPanelOpen,
+        }"
       >
         <div class="map-search-row">
           <button
@@ -942,6 +950,9 @@ onBeforeUnmount(() => {
   );
 }
 .map-top-overlay--selector-open {
+  z-index: 40;
+}
+.map-top-overlay--filter-open {
   z-index: 40;
 }
 
