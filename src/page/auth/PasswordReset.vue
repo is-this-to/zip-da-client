@@ -5,7 +5,7 @@ import Header from "../../component/Header.vue";
 import ActionLink from "../../component/button/ActionLink.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
-import memberMessage from "../../constants/memberMessage.js";
+import memberMessage from "../../constant/member/memberMessage.js";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 import signInValidator from "../../util/validator/member/signInValidator.js";
 

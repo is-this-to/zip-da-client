@@ -5,7 +5,7 @@ import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
 import ProfileImagePicker from "../../component/input/ProfileImagePicker.vue";
-import memberMessage from "../../constants/memberMessage.js";
+import memberMessage from "../../constant/member/memberMessage.js";
 import { useMemberStore } from "../../store/member/member.js";
 
 const router = useRouter();

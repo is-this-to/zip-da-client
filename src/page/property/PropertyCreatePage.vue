@@ -888,7 +888,7 @@ onMounted(async () => {
   gap: 4px;
 }
 
-.review-card dt,
+..review-card dt,
 .review-card p {
   color: var(--zipda-color-text-muted);
   font-size: 13px;
@@ -947,6 +947,11 @@ onMounted(async () => {
   position: sticky;
   bottom: 0;
   z-index: 10;
+  width: calc(
+    100% +
+    var(--zipda-page-padding) +
+    var(--zipda-page-padding)
+  );
   margin:
     0
     calc(var(--zipda-page-padding) * -1)
@@ -954,9 +959,7 @@ onMounted(async () => {
   padding:
     12px
     var(--zipda-page-padding)
-    calc(
-      12px + env(safe-area-inset-bottom)
-    );
+    calc(12px + env(safe-area-inset-bottom));
   background:
     linear-gradient(
       to bottom,

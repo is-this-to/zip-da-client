@@ -4,8 +4,8 @@ import { useRoute, useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import ProfileImagePicker from "../../component/input/ProfileImagePicker.vue";
 import HeartIcon from "../../component/icon/HeartIcon.vue";
-import memberMessage from "../../constants/memberMessage.js";
-import memberRoleCode from "../../constants/memberRoleCode.js";
+import memberMessage from "../../constant/member/memberMessage.js";
+import memberRoleCode from "../../constant/member/memberRoleCode.js";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 import { useMemberStore } from "../../store/member/member.js";
 

@@ -4,8 +4,8 @@ import { useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
-import agentApplicationCode from "../../constants/agentApplicationCode.js";
-import memberMessage from "../../constants/memberMessage.js";
+import agentApplicationCode from "../../constant/member/agentApplicationCode.js";
+import memberMessage from "../../constant/member/memberMessage.js";
 import { useMemberStore } from "../../store/member/member.js";
 
 const router = useRouter();
@@ -327,6 +327,7 @@ onMounted(loadApplication);
 }
 
 .result-action {
+  width: calc(100% + var(--zipda-page-padding) + var(--zipda-page-padding));
   margin: 4px calc(var(--zipda-page-padding) * -1) -40px;
 }
 

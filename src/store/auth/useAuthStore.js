@@ -103,7 +103,11 @@ export const useAuthStore = defineStore("authStore", () => {
     ).data.data;
 
   const registration = async (newMemberData) =>
-    (await myAxios.post("/api/member", newMemberData)).data.data;
+    (
+      await myAxios.post("/api/member", newMemberData, {
+        timeout: 15000,
+      })
+    ).data.data;
 
   const startKakaoLogin = () => {
     const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(
