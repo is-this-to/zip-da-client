@@ -50,6 +50,8 @@ jobs:
         # 이번 워크플로우 실행 번호를 태그로 사용해 빌드 (이때, env 값들도 arg로 추가)
         # 위에서 빌드한 이미지를 ghcr.io로 push
         run: |
+          echo $VITE_API_BASE_URL
+          echo $VITE_KAKAO_MAP_APP_KEY
           IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/$IMAGE_NAME
           docker build \
             --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL" \
