@@ -5,11 +5,11 @@ import signInValidator from "../../util/validator/member/signInValidator.js";
 import { useAuthStore } from "../../store/auth/useAuthStore.js";
 import { useMyErrorStore } from "../../store/error/useMyErrorStore.js";
 
-import Header from "../../component/Header.vue";
 import ActionLink from "../../component/button/ActionLink.vue";
 import MyButton from "../../component/button/MyButton.vue";
 import MyInput from "../../component/input/MyInput.vue";
 import memberMessage from "../../constants/memberMessage.js";
+import Header from "../../component/Header.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -64,7 +64,7 @@ const startKakaoLogin = () => {
 
 <template>
   <section class="page sign-in-page">
-    <Header title="ZIPDA" show-back />
+    <Header title="ZIPDA" :title-weight="900" brand></Header>
 
     <div class="page-content sign-in-content">
       <header class="sign-in-heading">

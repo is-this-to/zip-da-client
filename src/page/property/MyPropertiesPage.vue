@@ -66,6 +66,8 @@ const closeDialog = () => {
 };
 
 const submitStatus = async () => {
+  // 임호탁 파트 (거래 상태 변경 중복 제출 차단)
+  if (store.isActionLoading || !selectedProperty.value) return;
   if (!reason.value.trim()) {
     localError.value = "변경 사유를 입력해 주세요.";
     return;
@@ -74,6 +76,7 @@ const submitStatus = async () => {
     localError.value = "변경할 수 있는 거래 상태를 선택해 주세요.";
     return;
   }
+  localError.value = "";
   try {
     await store.changeTransactionStatus(selectedProperty.value, targetStatus.value, reason.value);
     closeDialog();
@@ -81,14 +84,26 @@ const submitStatus = async () => {
 };
 
 const submitDelete = async () => {
+  // 임호탁 파트 (매물 소프트 삭제 중복 제출 차단)
+  if (store.isActionLoading || !selectedProperty.value) return;
   if (!reason.value.trim()) {
     localError.value = "삭제 사유를 입력해 주세요.";
     return;
   }
+  localError.value = "";
   try {
     await store.deleteProperty(selectedProperty.value, reason.value);
     closeDialog();
   } catch { /* store owns feedback */ }
+};
+
+const openDetail = (property) => {
+  router.push({
+    name: "my-property-detail",
+    params: {
+      propertyId: property.propertyId,
+    },
+  });
 };
 
 const openVerification = (property, mode) => router.push({
@@ -101,11 +116,8 @@ onMounted(initialize);
 
 <template>
   <section class="page my-properties-page">
-    <Header title="내 매물">
-      <template #action>
-        <Header title="내 매물" />
-      </template>
-    </Header>
+    <!-- 임호탁 파트 (내 매물 목록 단일 공통 헤더) -->
+    <Header title="내 매물" />
 
     <div class="page-content my-properties-content">
       <div class="my-properties-intro">
@@ -130,6 +142,7 @@ onMounted(initialize);
           v-for="property in store.items"
           :key="property.propertyId"
           :property="property"
+          @detail="openDetail"
           @edit="router.push(`/properties/${property.propertyId}/edit`)"
           @status="openStatus"
           @delete="openDelete"
@@ -207,7 +220,6 @@ onMounted(initialize);
 .my-properties-content,
 .property-list { display: grid; gap: 16px; }
 .my-properties-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.header-add { width: 40px; height: 40px; background: transparent; border: 0; font-size: 25px; cursor: pointer; }
 .property-state,
 .empty-state { padding: 48px 20px; color: var(--zipda-color-text-muted); text-align: center; }
 .empty-state { display: grid; justify-items: center; gap: 12px; }
@@ -232,5 +244,5 @@ onMounted(initialize);
 .property-dialog select,
 .property-dialog textarea { width: 100%; padding: 11px; border: 1px solid var(--zipda-color-border); border-radius: var(--zipda-radius-medium); }
 @media (max-width: 480px) { .property-dialog-backdrop { padding: 0; background: var(--zipda-color-white); } .property-dialog { width: 100%; max-height: 100dvh; min-height: 100dvh; border-radius: 0; } }
-@media (min-width: 768px) { .my-properties-content { width: min(100%, 900px); margin: 0 auto; } .property-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .property-list > :last-child { grid-column: 1 / -1; } }
+@media (min-width: 768px) { .my-properties-content { width: min(100%, 900px); margin: 0 auto; } .property-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }  }
 </style>

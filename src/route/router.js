@@ -16,7 +16,7 @@ import AgentProfileEdit from "../page/agent/AgentProfileEdit.vue";
 import AgentProfileDetail from "../page/agent/AgentProfileDetail.vue";
 import PasswordReset from "../page/auth/PasswordReset.vue";
 
-// 팀원 각자파트 권한을 나눠서 routes 컴포넌트 경로 적어주세요
+// ???媛곸옄?뚰듃 沅뚰븳???섎닠??routes 而댄룷?뚰듃 寃쎈줈 ?곸뼱二쇱꽭??
 const setMeta = (
   requiresAuth,
   guestOnly,
@@ -24,10 +24,10 @@ const setMeta = (
   showBottomNav = false,
 ) => {
   return {
-    requiresAuth, // 로그인이 필요?
-    guestOnly, // 게스트만 접근 가능?
-    roles, // 해당 role을 가진 유저만 접근 가능, []인 경우 role 필요 없음
-    showBottomNav, // 메인·목록 화면의 기본 바로가기 표시 여부
+    requiresAuth, // 濡쒓렇?몄씠 ?꾩슂?
+    guestOnly, // 寃뚯뒪?몃쭔 ?묎렐 媛??
+    roles, // ?대떦 role??媛吏??좎?留??묎렐 媛?? []??寃쎌슦 role ?꾩슂 ?놁쓬
+    showBottomNav, // 硫붿씤쨌紐⑸줉 ?붾㈃??湲곕낯 諛붾줈媛湲??쒖떆 ?щ?
   };
 };
 
@@ -47,12 +47,18 @@ const routes = [
     component: () => import("../page/property/PropertyMapPage.vue"),
     meta: setMeta(false, false, [], true),
   },
-  // 임호탁 파트 (매물 등록·내 매물 관리 라우트)
+  // ?꾪샇???뚰듃 (留ㅻЪ ?깅줉쨌??留ㅻЪ 愿由??쇱슦??
   {
     path: "/my-properties",
     name: "my-properties",
     component: () => import("../page/property/MyPropertiesPage.vue"),
     meta: setMeta(true, false, ["USER", "AGENT"], true),
+  },
+  {
+    path: "/my-properties/:propertyId",
+    name: "my-property-detail",
+    component: () => import("../page/property/PropertyDetailPage.vue"),
+    meta: setMeta(true, false, ["USER", "AGENT"]),
   },
   {
     path: "/properties/new",
@@ -72,7 +78,36 @@ const routes = [
     component: () => import("../page/property/PropertyVerificationPage.vue"),
     meta: setMeta(true, false, ["USER", "AGENT"]),
   },
-  // 임호탁 파트 끝
+  // ?꾪샇???뚰듃 ??
+  // 愿由ъ옄 留ㅻЪ 寃利씲룰났媛?寃??
+  {
+    path: "/admin/property-verifications",
+    name: "admin-property-verifications",
+    component: () =>
+      import("../page/admin/PropertyVerificationAdminListPage.vue"),
+    meta: setMeta(true, false, ["CS_ADMIN", "SUPER_ADMIN"]),
+  },
+  {
+    path: "/admin/property-verifications/:verificationId",
+    name: "admin-property-verification-detail",
+    component: () =>
+      import("../page/admin/PropertyVerificationAdminDetailPage.vue"),
+    meta: setMeta(true, false, ["CS_ADMIN", "SUPER_ADMIN"]),
+  },
+  {
+    path: "/admin/property-publication-reviews",
+    name: "admin-property-publication-reviews",
+    component: () =>
+      import("../page/admin/PropertyPublicationAdminListPage.vue"),
+    meta: setMeta(true, false, ["CS_ADMIN", "SUPER_ADMIN"]),
+  },
+  {
+    path: "/admin/property-publication-reviews/:propertyId",
+    name: "admin-property-publication-review-detail",
+    component: () =>
+      import("../page/admin/PropertyPublicationAdminDetailPage.vue"),
+    meta: setMeta(true, false, ["CS_ADMIN", "SUPER_ADMIN"]),
+  },
   {
     path: "/properties",
     component: () => import("../page/property/PropertyMapPage.vue"),
@@ -104,6 +139,13 @@ const routes = [
     alias: "/members/me",
     component: MyPage,
     meta: setMeta(true, false, ["USER", "AGENT"], true),
+  },
+  {
+    path: "/mypage/reports",
+    name: "my-property-reports",
+    component: () =>
+      import("../page/report/PropertyReportListPage.vue"),
+    meta: setMeta(true, false, ["USER", "AGENT"]),
   },
   {
     path: "/mypage/agent-application/documents",
@@ -147,7 +189,7 @@ const routes = [
   },
 ];
 
-// 공통 컴포넌트 확인용 화면은 개발 환경에서만 노출한다.
+// 怨듯넻 而댄룷?뚰듃 ?뺤씤???붾㈃? 媛쒕컻 ?섍꼍?먯꽌留??몄텧?쒕떎.
 if (import.meta.env.DEV) {
   routes.push({
     path: "/examples/components",
@@ -161,15 +203,15 @@ const router = createRouter({
   routes,
 });
 
-// router 이동 전 실행되는 메서드
-// to: 이동하는 router, from: 지금 있는 router
+// router ?대룞 ???ㅽ뻾?섎뒗 硫붿꽌??
+// to: ?대룞?섎뒗 router, from: 吏湲??덈뒗 router
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
   if (!authStore.authInitialized) {
     try {
       await authStore.reissue();
     } catch {
-      // 토큰 재발급 실패: 게스트 상태로 진행
+      // ?좏겙 ?щ컻湲??ㅽ뙣: 寃뚯뒪???곹깭濡?吏꾪뻾
     }
   }
 
@@ -185,7 +227,7 @@ router.beforeEach(async (to, from, next) => {
     return next("/errors");
   }
 
-  // 나머지는 통과
+  // ?섎㉧吏???듦낵
   next();
 });
 

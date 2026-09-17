@@ -77,7 +77,7 @@ test("매물등록 허용 코드만 정렬하고 모든 값을 문자열 true �
   const serverOptions = [
     { optionCode: "PARKING", optionName: "주차", optionCategory: "BUILDING", registrationEnabled: true, required: false, displayOrder: 20 },
     { optionCode: "HIDDEN", optionName: "숨김", optionCategory: "ETC", registrationEnabled: false, required: false, displayOrder: 1 },
-    { optionCode: "ELEVATOR", optionName: "엘리베이터", optionCategory: "BUILDING", registrationEnabled: true, required: false, displayOrder: 10 },
+    { optionCode: "INTERNET", optionName: "인터넷", optionCategory: "LIVING", registrationEnabled: true, required: false, displayOrder: 10 },
     { optionCode: "BALCONY", optionName: "베란다", optionCategory: "SPACE", registrationEnabled: true, required: false, displayOrder: 4 },
     { optionCode: "AIR_CONDITIONER", optionName: "에어컨", optionCategory: "APPLIANCE", registrationEnabled: true, required: false, displayOrder: 2 },
     { optionCode: "REFRIGERATOR", optionName: "냉장고", optionCategory: "APPLIANCE", registrationEnabled: true, required: false, displayOrder: 3 },
@@ -89,7 +89,7 @@ test("매물등록 허용 코드만 정렬하고 모든 값을 문자열 true �
     { optionCode: "AIR_CONDITIONER", optionValue: "true" },
     { optionCode: "REFRIGERATOR", optionValue: "false" },
     { optionCode: "BALCONY", optionValue: "false" },
-    { optionCode: "ELEVATOR", optionValue: "false" },
+    { optionCode: "INTERNET", optionValue: "false" },
   ]);
   assert.equal(options.every((option) => typeof option.optionValue === "string"), true);
 });
@@ -134,22 +134,22 @@ test("기존 저장값에 금지 코드가 섞여 있어도 최종 등록 옵션
   const selected = selectedOptionCodesFromOptions([
     { optionCode: "AIR_CONDITIONER", optionValue: "true" },
     { optionCode: "PARKING", optionValue: "true" },
-    { optionCode: "ELEVATOR", optionValue: "true" },
-    { optionCode: "PET_ALLOWED", optionValue: "true" },
+    { optionCode: "INTERNET", optionValue: "true" },
+    { optionCode: "BIDET", optionValue: "true" },
     { optionCode: "VERANDA", optionValue: "true" },
   ]);
   const options = buildRegistrationOptions([
     { optionCode: "AIR_CONDITIONER", registrationEnabled: true, required: false, displayOrder: 1 },
     { optionCode: "PARKING", registrationEnabled: true, required: false, displayOrder: 2 },
-    { optionCode: "ELEVATOR", registrationEnabled: true, required: false, displayOrder: 3 },
-    { optionCode: "PET_ALLOWED", registrationEnabled: true, required: false, displayOrder: 4 },
+    { optionCode: "INTERNET", registrationEnabled: true, required: false, displayOrder: 3 },
+    { optionCode: "BIDET", registrationEnabled: true, required: false, displayOrder: 4 },
     { optionCode: "VERANDA", registrationEnabled: true, required: false, displayOrder: 5 },
   ], selected);
 
   assert.deepEqual(options, [
     { optionCode: "AIR_CONDITIONER", optionValue: "true" },
-    { optionCode: "ELEVATOR", optionValue: "true" },
-    { optionCode: "PET_ALLOWED", optionValue: "true" },
+    { optionCode: "INTERNET", optionValue: "true" },
+    { optionCode: "BIDET", optionValue: "true" },
   ]);
 });
 
@@ -265,7 +265,7 @@ test("preview 생성 실패는 complete된 파일 결과를 실패시키지 않�
   assert.equal(previewUrl, "");
 });
 
-test("최종 매물등록 옵션은 허용된 15개 코드만 포함하고 신규 허용 코드를 전송한다", () => {
+test("최종 매물등록 옵션은 허용된 15개 코드를 포함한다", () => {
   const finalRegistrationOptionCodes = [
     "AIR_CONDITIONER",
     "REFRIGERATOR",
@@ -278,13 +278,13 @@ test("최종 매물등록 옵션은 허용된 15개 코드만 포함하고 신�
     "ENTRANCE_SECURITY",
     "INTERNET",
     "BIDET",
-    "PARKING_AVAILABLE",
-    "ELEVATOR",
-    "PET_ALLOWED",
     "LOAN_AVAILABLE",
   ];
   const serverOptionCodes = [
     ...finalRegistrationOptionCodes,
+    "PARKING_AVAILABLE",
+    "ELEVATOR",
+    "PET_ALLOWED",
     "INDUCTION",
     "TV",
     "BED",
@@ -299,7 +299,7 @@ test("최종 매물등록 옵션은 허용된 15개 코드만 포함하고 신�
       required: false,
       displayOrder: index + 1,
     })),
-    new Set(["PARKING_AVAILABLE", "ELEVATOR", "PET_ALLOWED"]),
+    new Set(["INTERNET", "BIDET", "LOAN_AVAILABLE"]),
   );
 
   assert.deepEqual(
@@ -309,17 +309,19 @@ test("최종 매물등록 옵션은 허용된 15개 코드만 포함하고 신�
   assert.deepEqual(
     options
       .filter((option) =>
-        ["PARKING_AVAILABLE", "ELEVATOR", "PET_ALLOWED"].includes(option.optionCode),
+        ["INTERNET", "BIDET", "LOAN_AVAILABLE"].includes(option.optionCode),
       )
       .map((option) => [option.optionCode, option.optionValue]),
     [
-      ["PARKING_AVAILABLE", "true"],
-      ["ELEVATOR", "true"],
-      ["PET_ALLOWED", "true"],
+      ["INTERNET", "true"],
+      ["BIDET", "true"],
+      ["LOAN_AVAILABLE", "true"],
     ],
   );
   assert.equal(
-    options.some((option) => ["INDUCTION", "TV", "BED"].includes(option.optionCode)),
+    options.some((option) =>
+      ["PARKING_AVAILABLE", "ELEVATOR", "PET_ALLOWED", "INDUCTION", "TV", "BED"].includes(option.optionCode),
+    ),
     false,
   );
 });

@@ -6,6 +6,7 @@ import {
   createMyPropertyListParams,
   createPropertyCreateRequest,
   createVersionedMutation,
+  createVerificationEvidence,
   normalizePropertyId,
   PROPERTY_API_PATHS,
   PROPERTY_LOCATION_API_PATHS,
@@ -331,8 +332,12 @@ test("팀원 완료값 fixture를 등록 요청에 조합하며 폐기 옵션을
   assert.equal(typeof request.regionId, "string");
   assert.equal(typeof request.fileIds[0], "string");
   assert.equal(request.salePrice, null);
-  assert.equal(request.deposit, 1212);
-  assert.equal(request.monthlyRent, 12);
+  assert.equal(request.deposit, 12120000);
+  assert.equal(request.monthlyRent, 120000);
+  assert.equal(request.maintenanceFee, 80000);
+  assert.equal(request.isParkingAvailable, true);
+  assert.equal(request.hasElevator, true);
+  assert.equal(request.isPetAllowed, false);
   assert.equal(request.exclusiveArea, 108);
   assert.equal(request.floorCondition, "중층");
   assert.equal(request.title, "테스트 매물");
@@ -409,6 +414,47 @@ test("검증 증빙은 문자열 파일 TSID와 증빙 유형·정렬 계약을 
   assert.equal(hasVerificationEvidenceData([
     { ...validEvidence[0], sortOrder: -1 },
   ]), false);
+});
+
+test("완료 파일을 검증 모드와 등록 주체에 맞는 증빙으로 변환한다", () => {
+  const propertyFileId = "884685586571263703";
+  for (const [mode, publisherType, evidenceType] of [
+    ["owner", "DIRECT_OWNER", "REGISTRY_DOCUMENT"],
+    ["tenant", "DIRECT_TENANT", "OWNERSHIP_CONTRACT"],
+    ["reverification", "DIRECT_OWNER", "REGISTRY_DOCUMENT"],
+    ["reverification", "DIRECT_TENANT", "OWNERSHIP_CONTRACT"],
+    ["reverification", "AGENT_BROKERAGE", "BROKERAGE_REGISTRATION"],
+  ]) {
+    const evidence = createVerificationEvidence([propertyFileId], mode, publisherType);
+    assert.deepEqual(evidence, [{ propertyFileId, evidenceType, sortOrder: 0 }]);
+    assert.equal(hasVerificationEvidenceData(evidence), true);
+    assert.deepEqual(createVersionedMutation(4, { evidence }), {
+      body: { evidence, version: 4 },
+      headers: { "If-Match": '"4"' },
+    });
+  }
+});
+
+test("파일 추가·재정렬·삭제 시 증빙 순서를 다시 부여하고 마지막 삭제는 제출을 막는다", () => {
+  const first = "884685586571263703";
+  const second = "884685586571263704";
+  for (const ids of [[first], [first, second], [second, first], [second], []]) {
+    const evidence = createVerificationEvidence(ids, "owner", "DIRECT_OWNER");
+    assert.deepEqual(evidence.map((item) => item.propertyFileId), ids);
+    assert.deepEqual(evidence.map((item) => item.sortOrder), ids.map((_, index) => index));
+    assert.equal(hasVerificationEvidenceData(evidence), ids.length > 0);
+  }
+});
+
+test("알 수 없는 검증 모드·재검증 주체에는 기본 증빙을 임의로 지정하지 않는다", () => {
+  const ids = ["884685586571263703"];
+  assert.deepEqual(createVerificationEvidence(ids, "unknown", "DIRECT_OWNER"), []);
+  assert.deepEqual(createVerificationEvidence(ids, "reverification", undefined), []);
+  assert.deepEqual(createVerificationEvidence(ids, "reverification", "UNKNOWN"), []);
+});
+
+test("완료 파일 ID가 숫자이면 손실된 TSID를 문자열로 복구하지 않고 거부한다", () => {
+  assert.throws(() => createVerificationEvidence([884685586571263703], "owner", "DIRECT_OWNER"), /문자열/);
 });
 
 test("매물 API 경로는 문자열 TSID를 손실 없이 사용한다", () => {

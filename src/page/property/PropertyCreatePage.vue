@@ -1,6 +1,6 @@
 <script setup>
 // 임호탁 파트 (매물 등록 1·2·5단계와 팀원 담당 3·4단계 연결 흐름)
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
@@ -30,6 +30,17 @@ const confirmedFacts = ref(false);
 const confirmedEvidence = ref(false);
 const step4ImageUploadBusy = ref(false);
 const step4 = ref(null);
+const hasVisitedStep4 = ref(false);
+const registrationCompleted = ref(false);
+const createdPropertyId = ref("");
+const completionRoute = ref(null);
+const completionNavigationError = ref("");
+
+watch(step, (currentStep) => {
+  if (currentStep === 4) {
+    hasVisitedStep4.value = true;
+  }
+});
 
 const form = ref({
   publisherType: "",
@@ -39,6 +50,9 @@ const form = ref({
   deposit: "",
   monthlyRent: "",
   maintenanceFee: "",
+  isParkingAvailable: false,
+  hasElevator: false,
+  isPetAllowed: false,
   supplyArea: "",
   exclusiveArea: "",
   roomCount: "",
@@ -78,12 +92,19 @@ const selectedOptionCount = computed(() =>
 const reviewPrice = computed(() => form.value.transactionType
   ? formatPropertyPrice({
       transactionType: form.value.transactionType,
-      salePrice: Number(form.value.salePrice || 0),
-      deposit: Number(form.value.deposit || 0),
-      monthlyRent: Number(form.value.monthlyRent || 0),
+      salePrice: form.value.salePrice !== "" && form.value.salePrice != null
+        ? Math.round(Number(form.value.salePrice) * 10_000)
+        : null,
+      deposit: form.value.deposit !== "" && form.value.deposit != null
+        ? Math.round(Number(form.value.deposit) * 10_000)
+        : null,
+      monthlyRent: form.value.monthlyRent !== "" && form.value.monthlyRent != null
+        ? Math.round(Number(form.value.monthlyRent) * 10_000)
+        : null,
     })
   : "-");
 const canSubmit = computed(() =>
+  !registrationCompleted.value &&
   integrationReady.value &&
   confirmedFacts.value &&
   (!isPersonalProperty.value || confirmedEvidence.value),
@@ -185,27 +206,51 @@ const goBack = () => {
 const submit = async () => {
   errors.value = validatePropertyCore(form.value);
   if (Object.keys(errors.value).length > 0 || !canSubmit.value) return;
+
+  let created;
   try {
-    const publisherType = form.value.publisherType;
-    const created = await store.createProperty(buildRequest());
-    store.setRegistrationIntegration(null);
-    if (publisherType === "DIRECT_OWNER" || publisherType === "DIRECT_TENANT") {
-      await router.replace({
-        name: "property-verification",
-        params: {
-          propertyId: created.propertyId,
-          mode: publisherType === "DIRECT_OWNER" ? "owner" : "tenant",
-        },
-      });
-      return;
-    }
-    await router.replace(`/properties/${created.propertyId}/edit`);
+    created = await store.createProperty(buildRequest());
   } catch {
     errors.value = { ...errors.value, ...store.error?.fieldErrors };
+    return;
+  }
+
+  // 임호탁 파트 (매물 생성 성공과 후속 화면 이동 실패를 분리해 중복 등록 방지)
+  const publisherType = form.value.publisherType;
+  registrationCompleted.value = true;
+  createdPropertyId.value = created.propertyId ?? "";
+  store.resetRegistrationDraft();
+
+  if (!createdPropertyId.value) {
+    completionNavigationError.value = "매물 등록은 완료되었지만 등록 결과 식별자를 확인하지 못했습니다. 내 매물에서 등록 결과를 확인해 주세요.";
+    return;
+  }
+
+  completionRoute.value = publisherType === "DIRECT_OWNER" || publisherType === "DIRECT_TENANT"
+    ? {
+        name: "property-verification",
+        params: {
+          propertyId: createdPropertyId.value,
+          mode: publisherType === "DIRECT_OWNER" ? "owner" : "tenant",
+        },
+      }
+    : `/properties/${createdPropertyId.value}/edit`;
+
+  await retryCompletionNavigation();
+};
+
+const retryCompletionNavigation = async () => {
+  if (!completionRoute.value) return;
+  completionNavigationError.value = "";
+  try {
+    await router.replace(completionRoute.value);
+  } catch {
+    completionNavigationError.value = "매물 등록은 완료되었지만 다음 화면으로 이동하지 못했습니다. 다시 이동하거나 내 매물에서 등록 결과를 확인해 주세요.";
   }
 };
 
 onMounted(async () => {
+  store.resetRegistrationDraft();
   const access = await store.ensureAccess(["USER", "AGENT"]);
   if (access === "login") await router.replace("/sign-in");
 });
@@ -319,18 +364,21 @@ onMounted(async () => {
           @complete="completeLocationStep"
         />
 
-        <PropertyRegistrationStep4
-          v-else-if="step === 4"
-          ref="step4"
-          :property-type="form.propertyType"
-          :initial-file-ids="store.registrationIntegration?.fileIds ?? []"
-          :initial-options="store.registrationIntegration?.options ?? []"
-          :error-message="errors.integration"
-          @back="backFromStep4"
-          @busy-change="step4ImageUploadBusy = $event"
-          @complete="completeStep4"
-        />
         <template v-else-if="step === 5">
+        <template v-if="registrationCompleted">
+        <section class="review-complete" role="status" aria-live="polite">
+          <span aria-hidden="true">✓</span>
+          <strong>매물 등록이 완료되었습니다.</strong>
+          <p v-if="completionNavigationError">{{ completionNavigationError }}</p>
+          <p v-else>다음 화면으로 이동하고 있습니다.</p>
+        </section>
+
+        <div v-if="completionNavigationError" class="form-actions form-actions--step create-actions">
+          <MyButton variant="outline" @click="router.push('/my-properties')">내 매물 확인</MyButton>
+          <MyButton :disabled="!completionRoute" @click="retryCompletionNavigation">다음 화면 다시 열기</MyButton>
+        </div>
+        </template>
+        <template v-else>
         <section class="review-complete" aria-label="등록 준비 완료">
           <span aria-hidden="true">✓</span>
           <strong>마지막 확인 후 매물이 등록됩니다.</strong>
@@ -372,6 +420,20 @@ onMounted(async () => {
           <MyButton :disabled="!canSubmit" :loading="store.pendingAction === 'create'" @click="submit">동의하고 등록</MyButton>
         </div>
         </template>
+        </template>
+
+        <PropertyRegistrationStep4
+          v-if="hasVisitedStep4"
+          v-show="step === 4"
+          ref="step4"
+          :property-type="form.propertyType"
+          :initial-file-ids="store.registrationIntegration?.fileIds ?? []"
+          :initial-options="store.registrationIntegration?.options ?? []"
+          :error-message="errors.integration"
+          @back="backFromStep4"
+          @busy-change="step4ImageUploadBusy = $event"
+          @complete="completeStep4"
+        />
       </template>
     </div>
   </section>

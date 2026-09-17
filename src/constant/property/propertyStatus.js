@@ -81,3 +81,15 @@ export const resolvePropertyVerificationMode = (property) => {
   if (property.publisherType === "DIRECT_TENANT") return "tenant";
   return null;
 };
+
+export const resolveVerificationEvidenceType = (mode, publisherType) => {
+  const evidenceByPublisher = {
+    DIRECT_OWNER: "REGISTRY_DOCUMENT",
+    DIRECT_TENANT: "OWNERSHIP_CONTRACT",
+    AGENT_BROKERAGE: "BROKERAGE_REGISTRATION",
+  };
+  if (mode === "owner") return evidenceByPublisher.DIRECT_OWNER;
+  if (mode === "tenant") return evidenceByPublisher.DIRECT_TENANT;
+  if (mode === "reverification") return evidenceByPublisher[publisherType] ?? null;
+  return null;
+};
