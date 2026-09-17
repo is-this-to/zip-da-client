@@ -28,6 +28,7 @@ jobs:
   build-and-push:
     # 해당 job을 실행할 GitHub 호스팅 러너의 OS 이미지
     runs-on: ubuntu-22.04
+    environment: VITE_ENV
     steps:
       # Actions 로그에 표시될 step명
       - name: Checkout
