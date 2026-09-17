@@ -888,7 +888,7 @@ onMounted(async () => {
   gap: 4px;
 }
 
-..review-card dt,
+.review-card dt,
 .review-card p {
   color: var(--zipda-color-text-muted);
   font-size: 13px;
