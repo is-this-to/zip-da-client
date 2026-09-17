@@ -58,13 +58,7 @@ const PROFILE_IMAGE_TYPES = new Set([
   "image/gif",
   "image/webp",
 ]);
-const PROFILE_IMAGE_EXTENSIONS = new Set([
-  "jpg",
-  "jpeg",
-  "png",
-  "gif",
-  "webp",
-]);
+const PROFILE_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "gif", "webp"]);
 
 const requiredTermsAgreed = computed(() =>
   terms.value
@@ -126,7 +120,8 @@ const startVerificationTimer = (expiresInSeconds) => {
       clearVerificationTimer();
       verification.verified = false;
       verification.resendNeeded = true;
-      verification.message = "인증 시간이 만료되었어요. 새 인증번호를 요청해 주세요.";
+      verification.message =
+        "인증 시간이 만료되었어요. 새 인증번호를 요청해 주세요.";
     }
   }, 1000);
 };
@@ -329,7 +324,7 @@ const signup = async () => {
     let profileFileId = null;
     if (form.profile) {
       const uploadedProfile = await fileStore.uploadProfile(form.profile);
-      profileFileId = String(uploadedProfile.fileId);
+      profileFileId = String(uploadedProfile);
     }
 
     await authStore.registration({
@@ -400,7 +395,8 @@ onBeforeUnmount(() => {
         </h1>
         <small v-if="step === 3"
           >{{ form.email }}로 인증번호를 보냈어요.<br />
-          인증번호는 5분 이내에 입력해 주세요. (남은 시간 {{ verificationRemainingTime }})</small
+          인증번호는 5분 이내에 입력해 주세요. (남은 시간
+          {{ verificationRemainingTime }})</small
         ><small v-else-if="step === 4">프로필 사진은 선택 사항입니다.</small>
       </header>
 
