@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import Header from "../../component/Header.vue";
 import MyButton from "../../component/button/MyButton.vue";
-import memberMessage from "../../constants/memberMessage.js";
+import memberMessage from "../../constant/member/memberMessage.js";
 import { useMemberStore } from "../../store/member/member.js";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -200,9 +200,6 @@ onBeforeUnmount(() => {
         >
           <div class="document-title">
             <h2>{{ document.label }}</h2>
-            <span v-if="hasCompletedDocument(document.type) && !document.file">
-              업로드 완료
-            </span>
           </div>
 
           <label
@@ -327,12 +324,6 @@ onBeforeUnmount(() => {
 
 .document-title h2 {
   font-size: 16px;
-}
-
-.document-title span {
-  color: var(--zipda-color-primary);
-  font-size: 11px;
-  font-weight: 700;
 }
 
 .dropzone {
