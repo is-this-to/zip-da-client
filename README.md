@@ -7,9 +7,9 @@
 ## 대표 화면
 
 <p align="center">
-  <img src="./zip-da-client-doc/assets/screens/property-map.png" alt="지도 기반 매물 검색" width="16%">
-  <img src="./zip-da-client-doc/assets/screens/property-region-map.png" alt="지역 검색 결과" width="16%">
-  <img src="./zip-da-client-doc/assets/screens/property-filter.png" alt="매물 검색 필터" width="16%">
+  <img src="./zip-da-client-doc/assets/screens/property-map.png" alt="지도 기반 매물 검색" width="32%">
+  <img src="./zip-da-client-doc/assets/screens/property-region-map.png" alt="지역 검색 결과" width="32%">
+  <img src="./zip-da-client-doc/assets/screens/property-filter.png" alt="매물 검색 필터" width="32%">
 </p>
 
 ## ZIPDA MSA 구성
